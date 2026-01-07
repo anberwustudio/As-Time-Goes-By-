@@ -51,7 +51,7 @@
 </head>
 <body>
 
-<header>🧸 LITTLE NOOK POS (Pro 修正版)</header>
+<header>As Time Goes By 時光造所 -POS</header>
 <div class="nav-bar">
     <div id="navbar" style="display:flex; gap:10px;"></div>
     <button class="sync-btn" onclick="syncOfflineData()">🔄 離線數據同步</button>
@@ -503,7 +503,7 @@
     
     function backupData() {
         const blob = new Blob([JSON.stringify({inv, orders}, null, 2)], { type: "application/json" });
-        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `LittleNook_Backup_${new Date().toLocaleDateString()}.json`; a.click();
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `AsTimeGoesBy時光造所_Backup_${new Date().toLocaleDateString()}.json`; a.click();
     }
 
     function exportToExcel() {
@@ -525,6 +525,7 @@
 </script>
 </body>
 </html>
+
 
 
 
