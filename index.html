@@ -58,6 +58,10 @@
         .edit-cat-btn { background: #3182ce; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-left: 5px; }
         .del-cat-btn { background: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-left: 5px; }
         .sort-cat-btn { background: #8c7b6c; color: white; border: none; padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-left: 5px; }
+        
+        /* 歷史紀錄專用樣式 */
+        .history-card { border: 1px solid #ddd; padding: 10px; border-radius: 10px; margin-bottom: 10px; position: relative; }
+        .history-card.refunded { background-color: #fff1f2; opacity: 0.7; text-decoration: line-through; }
     </style>
 </head>
 <body>
@@ -192,6 +196,18 @@
     </div>
 </div>
 
+<div id="history-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h2 style="margin:0;">📜 歷史紀錄與退貨</h2>
+        <button onclick="toggleHistory()" style="padding:8px 15px;">✕ 關閉</button>
+    </div>
+    <div style="margin-bottom:10px; display:flex; gap:10px;">
+        <input type="date" id="history-search-date" onchange="renderHistory()" style="padding:8px; border-radius:5px; border:1px solid #ccc;">
+        <button onclick="document.getElementById('history-search-date').value=''; renderHistory();" style="padding:8px;">顯示全部紀錄</button>
+    </div>
+    <div id="history-list" style="flex:1; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:10px;"></div>
+</div>
+
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyC2IAICewOcuIj3aWMO9AZpg3tj7AKXwfU",
@@ -214,7 +230,6 @@
     let cart = []; 
     let currentPay = '現金';
 
-    // 初始化年份選單 (修改為 2025-2035)
     function initStatYear() {
         const sel = document.getElementById('stat-year');
         sel.innerHTML = '<option value="all">不分年份</option>';
@@ -236,6 +251,7 @@
                 orders.sort((a,b) => (b.d+b.t).localeCompare(a.d+a.t));
                 updateLog(); 
                 renderStatTable();
+                if(document.getElementById('history-panel').style.display === 'flex') renderHistory();
             });
         }
     }
@@ -358,19 +374,10 @@
         const s = Number(document.getElementById('new-s').value || 0);
         
         if(!id || !n) { alert("請填寫代碼與品名"); return; }
-        
         const catIdx = inv.findIndex(x => x.cat === catName);
         if(catIdx === -1) return;
-        
         if(!inv[catIdx].items) inv[catIdx].items = [];
         inv[catIdx].items.push({ id, n, c, p, s, color: "#FFFFFF" });
-        
-        document.getElementById('new-id').value = '';
-        document.getElementById('new-n').value = '';
-        document.getElementById('new-c').value = '';
-        document.getElementById('new-p').value = '';
-        document.getElementById('new-s').value = '';
-        
         syncToDB();
     }
 
@@ -405,31 +412,22 @@
         logArea.innerHTML = todayOrders.map(o => `<div style="padding:5px 0; border-bottom:1px solid #eee;">[${o.t}] <b>$${o.total}</b> (${o.pay})</div>`).join('');
     }
 
-    // --- 銷售排名功能修正區 ---
-
-    // 1. 不分銷售時間 (將年月都設為 all)
+    // --- 銷售排名功能區 ---
     function resetStatFilter() {
         document.getElementById('stat-year').value = 'all';
         document.getElementById('stat-month').value = 'all';
         renderStatTable();
     }
 
-    // 2. 渲染統計表格 (支援年份、月份、全部三種過濾)
     function renderStatTable() {
         const selYear = document.getElementById('stat-year').value;
         const selMonth = document.getElementById('stat-month').value;
+        let filteredOrders = orders.filter(o => !o.refunded); // 統計不含退貨
         
-        let filteredOrders = orders;
-        
-        // 過濾年份
-        if(selYear !== 'all') {
-            filteredOrders = filteredOrders.filter(o => o.d.includes(selYear));
-        }
-        
-        // 過濾月份 (假設日期格式為 YYYY/M/D)
+        if(selYear !== 'all') filteredOrders = filteredOrders.filter(o => o.d.includes(selYear));
         if(selMonth !== 'all') {
             filteredOrders = filteredOrders.filter(o => {
-                const parts = o.d.split('/'); 
+                const parts = o.d.split(/[\/\-]/); 
                 return parseInt(parts[1]) === parseInt(selMonth);
             });
         }
@@ -446,8 +444,57 @@
         document.getElementById('stat-tbody').innerHTML = sorted.map(([n,v]) => `<tr><td style="text-align:left;">${n}</td><td>${v.q}</td><td>$${v.p}</td></tr>`).join('');
     }
 
+    // --- 歷史紀錄功能區 (補回) ---
+    function toggleHistory() {
+        const p = document.getElementById('history-panel');
+        p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+        if(p.style.display === 'flex') renderHistory();
+    }
+
+    function renderHistory() {
+        const searchDate = document.getElementById('history-search-date').value;
+        let displayOrders = orders;
+        
+        if(searchDate) {
+            // 處理日期格式比對
+            const d = new Date(searchDate).toLocaleDateString('zh-TW');
+            displayOrders = orders.filter(o => o.d === d);
+        }
+
+        const list = document.getElementById('history-list');
+        list.innerHTML = displayOrders.map(o => `
+            <div class="history-card ${o.refunded ? 'refunded' : ''}">
+                <div><strong>📅 ${o.d} ${o.t}</strong></div>
+                <div>品項: ${o.items.map(i => i.n).join(', ')}</div>
+                <div>總額: $${o.total} (${o.pay}) | 備註: ${o.note || '無'}</div>
+                ${!o.refunded ? `<button onclick="refundOrder('${o.firebaseKey}')" style="margin-top:5px; color:red; cursor:pointer;">⚠️ 退貨</button>` : '<b style="color:red;">[已退貨]</b>'}
+            </div>
+        `).join('');
+    }
+
+    function refundOrder(key) {
+        if(confirm("確定要辦理退貨？庫存將會回補。")){
+            const order = orders.find(o => o.firebaseKey === key);
+            if(!order) return;
+            
+            // 回補庫存
+            order.items.forEach(item => {
+                inv.forEach(cat => (cat.items || []).forEach(i => {
+                    if(i.id === item.id) i.s++;
+                }));
+            });
+            
+            db.ref('orders/' + key).update({ refunded: true });
+            db.ref('inventory').set(inv);
+            alert("退貨成功，庫存已回補");
+        }
+    }
+
     function syncOfflineData() { db.ref('inventory').set(inv); alert("同步完成"); }
-    function toggleHistory() { alert("此功能尚未變動"); }
+    
+    function exportToExcel() {
+        alert("匯出功能準備中...");
+    }
 </script>
 </body>
 </html>
