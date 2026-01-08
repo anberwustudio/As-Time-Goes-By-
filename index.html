@@ -42,7 +42,22 @@
         .pay-btn { flex: 1; padding: 15px; border-radius: 10px; border: 1px solid #ccc; background: white; cursor: pointer; font-weight: bold; font-size: 1.3em;}
         .pay-btn.active { background: var(--accent-brown); color: white; border-color: var(--accent-brown); }
         #admin-panel, #history-panel { position: fixed; inset: 10px; background: white; z-index: 1000; border-radius: 20px; display: none; flex-direction: column; padding: 15px; border: 3px solid var(--main-brown); box-shadow: 0 0 50px rgba(0,0,0,0.3); }
-        .admin-layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; flex: 1; overflow: hidden; }
+        /* 修改此段以適應手機螢幕 */
+.admin-layout { 
+    display: flex; 
+    flex-direction: column; /* 手機上改為上下堆疊 */
+    gap: 15px; 
+    flex: 1; 
+    overflow-y: auto; 
+}
+
+/* 針對電腦版維持並排 */
+@media (min-width: 768px) {
+    .admin-layout { 
+        display: grid; 
+        grid-template-columns: 1.5fr 1fr; 
+    }
+}
         .add-row-top { background: #f0fdf4; padding: 15px; border: 2px solid var(--profit-green); border-radius: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
         .admin-table-container { overflow: auto; border: 1px solid #eee; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; }
@@ -158,8 +173,8 @@
         <div><label>售價</label><input type="number" id="new-p" style="width:60px;"></div>
        <div><label>庫存</label><input type="number" id="new-s" style="width:60px;"></div>
 <div>
-    <label>底色</label>
-    <select id="new-color" style="padding:5px; border-radius:5px;">
+    <label>色塊</label>
+    <select id="new-color">
         <option value="#FFFFFF">預設白</option>
         <option value="#FFC8B4">紅色</option>
         <option value="#FFFFBB">黃色</option>
@@ -258,7 +273,7 @@
                 gridHtml += `<div style="color:#999; padding:10px;">此分類暫無商品</div>`;
             } else {
                 cat.items.forEach(it => {
-                    gridHtml += `<div class="p-btn" onclick="addCart('${it.id}')" style="background-color: ${it.color || '#FFFFFF'}">
+                    gridHtml += `<div class="p-btn" onclick="addCart('${it.id}')" style="background-color: ${it.color || '#FFFFFF'};">`
     <div class="p-name">${it.id} ${it.n}</div>
                         <div class="p-price">$${it.p}</div>
                         <div class="p-stock">存:${it.s}</div>
@@ -414,15 +429,16 @@
                     <td><input type="number" value="${it.c}" onchange="editItem(${ci},${ii},'c',this.value)" style="width:50px;"></td>
                     <td><input type="number" value="${it.p}" onchange="editItem(${ci},${ii},'p',this.value)" style="width:50px;"></td>
                     <td><input type="number" value="${it.s}" onchange="editItem(${ci},${ii},'s',this.value)" style="width:50px;"></td>
-                    <td>
-    <select onchange="editItem(${ci},${ii},'color',this.value)" style="background:${it.color || '#FFF'}">
-        <option value="#FFFFFF" ${it.color=='#FFFFFF'?'selected':''}>白</option>
-        <option value="#FFC8B4" ${it.color=='#FFC8B4'?'selected':''}>紅</option>
-        <option value="#FFFFBB" ${it.color=='#FFFFBB'?'selected':''}>黃</option>
-        <option value="#BBFFEE" ${it.color=='#BBFFEE'?'selected':''}>藍</option>
-        <option value="#CCFF99" ${it.color=='#CCFF99'?'selected':''}>綠</option>
-        <option value="#E8CCFF" ${it.color=='#E8CCFF'?'selected':''}>紫</option>
+                    `<td>
+    <select onchange="editItem(${ci},${ii},'color',this.value)" style="background:${it.color || '#fff'}; width:60px;">
+        <option value="#FFFFFF">白</option>
+        <option value="#FFC8B4" ${it.color==='#FFC8B4'?'selected':''}>紅</option>
+        <option value="#FFFFBB" ${it.color==='#FFFFBB'?'selected':''}>黃</option>
+        <option value="#BBFFEE" ${it.color==='#BBFFEE'?'selected':''}>藍</option>
+        <option value="#CCFF99" ${it.color==='#CCFF99'?'selected':''}>綠</option>
+        <option value="#E8CCFF" ${it.color==='#E8CCFF'?'selected':''}>紫</option>
     </select>
+</td>`
 </td>
                     <td><span onclick="delP(${ci},${ii})" class="del-x">✕</span></td>
                 </tr>`;
@@ -431,16 +447,35 @@
         document.getElementById('admin-tbody').innerHTML = html;
     }
 
-    function addNewProduct() {
-        const catN = document.getElementById('select-cat').value;
-        const id = document.getElementById('new-id').value, n = document.getElementById('new-n').value;
-        const c = Number(document.getElementById('new-c').value), p = Number(document.getElementById('new-p').value), s = Number(document.getElementById('new-s').value);
-        if(!n || !catN || catN === "ADD") return alert("請填寫品名並選擇分類");
+   function addNewProduct() {
+    const catN = document.getElementById('select-cat').value;
+    const id = document.getElementById('new-id').value;
+    const n = document.getElementById('new-n').value;
+    const c = Number(document.getElementById('new-c').value);
+    const p = Number(document.getElementById('new-p').value);
+    const s = Number(document.getElementById('new-s').value);
+    const color = document.getElementById('new-color').value; // 讀取顏色
+
+    if(!n || !catN || catN === "ADD") return alert("請填寫品名並選擇分類");
+    
+    const category = inv.find(v => v.cat === catN);
+    if(category) {
+        if(!category.items) category.items = [];
         
-        const category = inv.find(v => v.cat === catN);
-        if(category) {
-            if(!category.items) category.items = [];
-            const color = document.getElementById('new-color').value;
+        // 將 color 存入商品物件中
+        category.items.push({
+            id: id || Date.now().toString().slice(-4), 
+            n, c, p, s, 
+            color: color 
+        }); 
+
+        syncToDB();
+
+        // 清除輸入框，方便輸入下一個商品
+        ['new-id','new-n','new-c','new-p','new-s'].forEach(f => document.getElementById(f).value='');
+        document.getElementById('new-color').selectedIndex = 0; // 顏色回到預設
+    }
+}
 category.items.push({id: id || Date.now().toString().slice(-4), n, c, p, s, color: color});
             syncToDB();
             ['new-id','new-n','new-c','new-p','new-s'].forEach(f => document.getElementById(f).value='');
@@ -563,6 +598,7 @@ category.items.push({id: id || Date.now().toString().slice(-4), n, c, p, s, colo
 </script>
 </body>
 </html>
+
 
 
 
