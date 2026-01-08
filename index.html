@@ -111,7 +111,7 @@
                     <button class="cash-btn" onclick="addCash(100)">$100</button>
                     <button class="cash-btn" onclick="addCash(500)">$500</button>
                     <button class="cash-btn" onclick="addCash(1000)">$1000</button>
-                    <button class="cash-btn" onclick="document.getElementById('cash-in').value='';calcChange();" style="background:#fff1f2; color:#be123c; border:1px solid #fda4af;">重設</button>
+                    <button class="cash-btn" onclick="document.getElementById('cash-in').value='';calcChange();" style="background:#fff1f2; color:#be123c; border-color:#fda4af;">重設</button>
                 </div>
             </div>
 
@@ -173,8 +173,7 @@
             <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
                 <h3 style="margin:0;">📊 銷售排名</h3>
                 <div style="display:flex; gap:5px; align-items:center;">
-                    <select id="stat-year" onchange="renderStatTable()" style="padding:5px; border-radius:5px; flex:1;">
-                        </select>
+                    <select id="stat-year" onchange="renderStatTable()" style="padding:5px; border-radius:5px; flex:1;"></select>
                     <select id="stat-month" onchange="renderStatTable()" style="padding:5px; border-radius:5px; flex:1;">
                         <option value="all">不分月份</option>
                         <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
@@ -183,7 +182,7 @@
                         <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
                     </select>
                 </div>
-                <button onclick="resetStatFilter()" style="width:100%; padding:8px; background:#e2e8f0; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🕒 不分銷售時間 (全部統計)</button>
+                <button onclick="resetStatFilter()" style="padding:8px; font-size:0.9em; background:var(--main-brown); color:white; border:none; border-radius:5px; cursor:pointer;">🕒 不分銷售時間 (全部統計)</button>
             </div>
             <table style="font-size:0.9em;">
                 <thead><tr style="background:#eee;"><th>品名</th><th>量</th><th>額</th></tr></thead>
@@ -215,16 +214,15 @@
     let cart = []; 
     let currentPay = '現金';
 
-    // 動態生成 2025-2035 年份
-    function initYearOptions() {
-        const yearSel = document.getElementById('stat-year');
-        let options = '<option value="all">不分年份</option>';
+    // 初始化年份選單 (修改為 2025-2035)
+    function initStatYear() {
+        const sel = document.getElementById('stat-year');
+        sel.innerHTML = '<option value="all">不分年份</option>';
         for(let y=2025; y<=2035; y++) {
-            options += `<option value="${y}">${y}年</option>`;
+            sel.innerHTML += `<option value="${y}">${y}年</option>`;
         }
-        yearSel.innerHTML = options;
     }
-    initYearOptions();
+    initStatYear();
 
     function loadData() {
         if(db) {
@@ -251,7 +249,7 @@
         
         inv.forEach((cat, idx) => {
             nav.innerHTML += `<div class="nav-btn" onclick="document.getElementById('c${idx}').scrollIntoView()">${cat.cat}</div>`;
-            jumpSelect.innerHTML += `<option value="ac${idx}">${cat.cat}</option>`;
+            if(jumpSelect) jumpSelect.innerHTML += `<option value="ac${idx}">${cat.cat}</option>`;
             
             let gridHtml = `<div class="cat-title" id="c${idx}">${cat.cat}</div><div class="product-grid">`;
             (cat.items || []).forEach(it => {
@@ -279,19 +277,21 @@
     }
 
     function applyDiscount(type, val) {
+        const subtotal = cart.reduce((a, b) => a + b.p, 0);
         const input = document.getElementById('discount');
         if (type === 'fix') {
             input.value = val === 0 ? '' : val;
         } else if (type === 'ratio') {
-            const subtotal = cart.reduce((a, b) => a + b.p, 0);
-            input.value = Math.round(subtotal * (1 - val));
+            const diff = subtotal * (1 - val);
+            input.value = Math.round(diff);
         }
         calc();
     }
 
     function addCash(val) {
         const input = document.getElementById('cash-in');
-        input.value = Number(input.value || 0) + val;
+        let current = Number(input.value || 0);
+        input.value = current + val;
         calcChange();
     }
 
@@ -349,7 +349,6 @@
         cart=[]; document.getElementById('discount').value = ''; document.getElementById('cash-in').value = ''; renderCart(); 
     }
 
-    // --- 商品管理功能 ---
     function addNewProduct() {
         const catName = document.getElementById('select-cat').value;
         const id = document.getElementById('new-id').value;
@@ -366,7 +365,6 @@
         if(!inv[catIdx].items) inv[catIdx].items = [];
         inv[catIdx].items.push({ id, n, c, p, s, color: "#FFFFFF" });
         
-        // 清空輸入
         document.getElementById('new-id').value = '';
         document.getElementById('new-n').value = '';
         document.getElementById('new-c').value = '';
@@ -394,11 +392,11 @@
     function moveCategory(ci, dir) { if(ci + dir >= 0 && ci + dir < inv.length) { const temp = inv[ci]; inv[ci] = inv[ci + dir]; inv[ci + dir] = temp; syncToDB(); } }
     function editCategoryName(ci) { const n = prompt("新名稱：", inv[ci].cat); if (n) { inv[ci].cat = n; syncToDB(); } }
     function deleteCategory(ci) { if(confirm(`確定刪除分類「${inv[ci].cat}」？`)) { inv.splice(ci, 1); syncToDB(); } }
-    function checkNewCat(v) { if(v === "ADD") { const n = prompt("新分類名？"); if(n){ inv.push({cat:n, items:[]}); syncToDB(); } document.getElementById('select-cat').selectedIndex=0; } }
-    function updateCatSelect() { const sel = document.getElementById('select-cat'); if(sel) sel.innerHTML = inv.map(c => `<option value="${c.cat}">${c.cat}</option>`).join('') + `<option value="ADD">➕ 新增</option>`; }
+    function checkNewCat(v) { if(v === "ADD") { const n = prompt("新分類名？"); if(n){ inv.push({cat:n, items:[]}); syncToDB(); } document.getElementById('select-cat').value = inv[0].cat; } }
+    function updateCatSelect() { const sel = document.getElementById('select-cat'); if(sel) sel.innerHTML = inv.map(c => `<option value="${c.cat}">${c.cat}</option>`).join('') + `<option value="ADD">➕ 新增分類</option>`; }
     
     function toggleAdmin() { const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; if(p.style.display === 'flex') renderAdminTable(); }
-    function jumpToAdminCat(val) { if(val) document.getElementById(val).scrollIntoView(); }
+    function jumpToAdminCat(id) { if(id) document.getElementById(id).scrollIntoView(); }
 
     function updateLog() {
         const logArea = document.getElementById('order-log');
@@ -407,26 +405,31 @@
         logArea.innerHTML = todayOrders.map(o => `<div style="padding:5px 0; border-bottom:1px solid #eee;">[${o.t}] <b>$${o.total}</b> (${o.pay})</div>`).join('');
     }
 
-    // --- 銷售排名統計邏輯 ---
+    // --- 銷售排名功能修正區 ---
+
+    // 1. 不分銷售時間 (將年月都設為 all)
     function resetStatFilter() {
         document.getElementById('stat-year').value = 'all';
         document.getElementById('stat-month').value = 'all';
         renderStatTable();
     }
 
+    // 2. 渲染統計表格 (支援年份、月份、全部三種過濾)
     function renderStatTable() {
         const selYear = document.getElementById('stat-year').value;
         const selMonth = document.getElementById('stat-month').value;
         
         let filteredOrders = orders;
-
-        // 如果不是「顯示全部」，則進行過濾
-        if (selYear !== 'all') {
+        
+        // 過濾年份
+        if(selYear !== 'all') {
             filteredOrders = filteredOrders.filter(o => o.d.includes(selYear));
         }
-        if (selMonth !== 'all') {
+        
+        // 過濾月份 (假設日期格式為 YYYY/M/D)
+        if(selMonth !== 'all') {
             filteredOrders = filteredOrders.filter(o => {
-                const parts = o.d.split('/'); // 格式 2025/1/8 或 2025/01/08
+                const parts = o.d.split('/'); 
                 return parseInt(parts[1]) === parseInt(selMonth);
             });
         }
@@ -444,8 +447,7 @@
     }
 
     function syncOfflineData() { db.ref('inventory').set(inv); alert("同步完成"); }
-    function exportToExcel() { alert("匯出功能已觸發"); }
-    function toggleHistory() { alert("歷史紀錄視窗"); }
+    function toggleHistory() { alert("此功能尚未變動"); }
 </script>
 </body>
 </html>
