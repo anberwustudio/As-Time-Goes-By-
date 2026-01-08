@@ -475,6 +475,82 @@
     function moveCategory(ci, dir) { if(ci + dir >= 0 && ci + dir < inv.length) { const temp = inv[ci]; inv[ci] = inv[ci + dir]; inv[ci + dir] = temp; syncToDB(); } }
     function editCategoryName(ci) { const n = prompt("請修改分類名稱：", inv[ci].cat); if (n) { inv[ci].cat = n; syncToDB(); } }
     function deleteCategory(ci) { if(confirm(`⚠️ 確定要刪除「${inv[ci].cat}」及其所有商品？`)) { inv.splice(ci, 1); if(inv.length === 0) inv = [{cat: "新分類", items: []}]; syncToDB(); } }
+
+    /** 修正部分：新增歷史紀錄查詢與退貨功能 **/
+    function searchHistory(type) {
+        let filtered = [];
+        const resArea = document.getElementById('history-result-area');
+        
+        if (type === 'day') {
+            const dateVal = document.getElementById('search-date').value;
+            if (!dateVal) return alert("請選擇日期");
+            const targetDate = new Date(dateVal).toLocaleDateString('zh-TW');
+            filtered = orders.filter(o => o.d === targetDate);
+        } else {
+            const monthVal = document.getElementById('search-month').value; // YYYY-MM
+            if (!monthVal) return alert("請選擇月份");
+            const [y, m] = monthVal.split('-');
+            filtered = orders.filter(o => {
+                const parts = o.d.split('/');
+                return parts[0] == y && parts[1] == parseInt(m);
+            });
+        }
+
+        const totalRevenue = filtered.reduce((a, b) => a + b.total, 0);
+        const totalProfit = filtered.reduce((a, b) => a + b.profit, 0);
+
+        let html = `
+            <div style="margin-bottom:15px; padding:10px; background:#f0fdf4; border-radius:10px; border:1px solid #bcf0da;">
+                <h3 style="margin:0 0 5px 0;">📊 統計摘要</h3>
+                <span style="font-size:1.1em;">總筆數: <b>${filtered.length}</b> | 總營收: <b style="color:red;">$${totalRevenue}</b> | 總利潤: <b style="color:green;">$${totalProfit}</b></span>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>時間</th><th>內容</th><th>金額</th><th>支付</th><th>備註</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+        `;
+
+        html += filtered.map(o => `
+            <tr>
+                <td>${o.d}<br>${o.t}</td>
+                <td style="text-align:left; font-size:0.85em;">${o.items.map(i => i.n).join('<br>')}</td>
+                <td>$${o.total}</td>
+                <td>${o.pay}</td>
+                <td>${o.note || '-'}</td>
+                <td><button onclick="refundOrder('${o.firebaseKey}')" style="color:red; cursor:pointer; background:none; border:1px solid red; border-radius:4px; padding:2px 5px;">退貨</button></td>
+            </tr>
+        `).join('');
+
+        html += `</tbody></table>`;
+        resArea.innerHTML = filtered.length ? html : '<div style="text-align:center; padding:20px; color:#999;">查無資料</div>';
+    }
+
+    function refundOrder(key) {
+        if (!confirm("⚠️ 確定要退貨此訂單？\n此操作將刪除紀錄並自動還原庫存量。")) return;
+        
+        const targetOrder = orders.find(o => o.firebaseKey === key);
+        if (targetOrder) {
+            // 還原庫存
+            targetOrder.items.forEach(refundItem => {
+                inv.forEach(cat => {
+                    (cat.items || []).forEach(invItem => {
+                        if (invItem.id === refundItem.id) invItem.s++;
+                    });
+                });
+            });
+            
+            // 刪除 Firebase 中的紀錄並更新庫存
+            db.ref('orders/' + key).remove();
+            db.ref('inventory').set(inv);
+            alert("退貨成功，庫存已回補");
+            // 重新整理顯示 (直接觸發當前的查詢)
+            const dateVal = document.getElementById('search-date').value;
+            const monthVal = document.getElementById('search-month').value;
+            if (dateVal) searchHistory('day');
+            else if (monthVal) searchHistory('month');
+        }
+    }
 </script>
 </body>
 </html>
