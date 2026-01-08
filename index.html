@@ -16,7 +16,6 @@
         .nav-btn { background: white; border: 1px solid #d1c7bc; padding: 8px 18px; border-radius: 20px; white-space: nowrap; cursor: pointer; font-size: 1.1em; }
         .sync-btn { background: #ff9800; color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-left: auto; }
         
-        /* 佈局比例調整：增加 checkout-area 寬度以容納更多按鈕，並微調紀錄框空間 */
         .main-content { display: flex; flex: 1; overflow: hidden; padding: 10px; gap: 10px; }
         .item-area { flex: 1.5; overflow-y: auto; background: white; border-radius: 15px; padding: 15px; border: 2px solid #e8e0d9; }
         .checkout-area { flex: 1.2; display: flex; flex-direction: column; gap: 10px; min-width: 340px; overflow-y: auto; }
@@ -35,7 +34,6 @@
         .big-input { font-size: 1.8em; padding: 10px; width: 100%; border-radius: 10px; border: 2px solid #d1c7bc; text-align: right; box-sizing: border-box; background: #fffcf5; font-weight: bold; }
         .small-note { font-size: 1.1em; padding: 10px; width: 100%; border-radius: 8px; border: 1px solid #d1c7bc; box-sizing: border-box; margin-top: 5px; appearance: none; }
         
-        /* 折扣與實收金額快速按鈕樣式：強制並行 */
         .quick-btn-row { display: flex; gap: 4px; margin-top: 6px; flex-wrap: nowrap; overflow-x: hidden; }
         .q-btn { flex: 1; padding: 8px 2px; font-size: 0.85em; border: 1px solid #d1c7bc; background: #fcfaf8; border-radius: 6px; cursor: pointer; white-space: nowrap; text-align: center; }
         
@@ -43,7 +41,6 @@
         .pay-btn { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #ccc; background: white; cursor: pointer; font-weight: bold; font-size: 1.2em;}
         .pay-btn.active { background: var(--accent-brown); color: white; border-color: var(--accent-brown); }
         
-        /* 今日紀錄框：加強 iPad 上的高度顯示 */
         #order-log-container { min-height: 250px; flex: 1; display: flex; flex-direction: column; }
         #order-log { flex: 1; overflow-y: auto; }
 
@@ -142,7 +139,11 @@
 <div id="history-panel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <h2 style="margin:0;">📜 歷史紀錄管理</h2>
-        <button onclick="toggleHistory()" style="padding:8px 15px;">✕ 關閉</button>
+        <div style="display:flex; gap:10px;">
+            <button onclick="exportHistoryToExcel()" style="padding:8px 15px; background:#217346; color:white; border:none; border-radius:5px; cursor:pointer;">📥 匯出 Excel</button>
+            <button onclick="clearAllHistory()" style="padding:8px 15px; background:#d9534f; color:white; border:none; border-radius:5px; cursor:pointer;">🧹 清空所有紀錄</button>
+            <button onclick="toggleHistory()" style="padding:8px 15px;">✕ 關閉</button>
+        </div>
     </div>
     <div style="background:#fdf5f0; padding:15px; border-radius:10px; margin-bottom:15px; display:flex; gap:15px; align-items:center;">
         <div>
@@ -164,7 +165,7 @@
             <select id="admin-cat-jump" onchange="jumpToAdminCat(this.value)" style="padding:8px; border-radius:5px;">
                 <option value="">快速跳轉分類...</option>
             </select>
-            <button onclick="exportToExcel()" style="padding:8px 15px; background:#217346; color:white; border:none;">📥 匯出</button>
+            <button onclick="exportToExcel()" style="padding:8px 15px; background:#217346; color:white; border:none;">📥 庫存匯出</button>
             <button onclick="backupData()" style="padding:8px 15px; background:#666; color:white; border:none;">💾 備份</button>
             <input type="file" id="import-file" style="display:none;" onchange="importData(event)">
             <button onclick="document.getElementById('import-file').click()" style="padding:8px 15px; background:#d9534f; color:white; border:none;">⚠️ 還原</button>
@@ -183,11 +184,15 @@
             <label>色塊</label>
             <select id="new-color">
                 <option value="#FFFFFF">預設白</option>
-                <option value="#FFC8B4">紅色</option>
-                <option value="#FFFFBB">黃色</option>
-                <option value="#BBFFEE">藍色</option>
-                <option value="#CCFF99">綠色</option>
-                <option value="#E8CCFF">紫色</option>
+                <option value="#FF0000">紅</option>
+                <option value="#FF8800">橘</option>
+                <option value="#FFEE99">黃</option>
+                <option value="#CCBBFF">紫</option>
+                <option value="#FF8888">玫紅</option>
+                <option value="#33CCFF">藍</option>
+                <option value="#FFB7DD">粉</option>
+                <option value="#CCEEFF">冰藍</option>
+                <option value="#EEFFBB">綠</option>
             </select>
         </div>
         <button onclick="addNewProduct()" style="background:var(--profit-green); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">➕ 新增商品</button>
@@ -239,6 +244,20 @@
     let cart = []; 
     let currentPay = '現金';
 
+    // 色塊 HTML 選項通用字串
+    const colorOptionsHtml = `
+        <option value="#FFFFFF">白</option>
+        <option value="#FF0000">紅</option>
+        <option value="#FF8800">橘</option>
+        <option value="#FFEE99">黃</option>
+        <option value="#CCBBFF">紫</option>
+        <option value="#FF8888">玫紅</option>
+        <option value="#33CCFF">藍</option>
+        <option value="#FFB7DD">粉</option>
+        <option value="#CCEEFF">冰藍</option>
+        <option value="#EEFFBB">綠</option>
+    `;
+
     function loadData() {
         if(db) {
             db.ref('inventory').on('value', snap => {
@@ -253,7 +272,6 @@
                 renderStatTable();
             });
         }
-        // 初始化年份與月份選單
         const ySel = document.getElementById('stat-year');
         for(let y=2025; y<=2035; y++) ySel.innerHTML += `<option value="${y}">${y}年</option>`;
         const mSel = document.getElementById('stat-month');
@@ -293,16 +311,12 @@
         if(document.getElementById('admin-panel').style.display === 'flex') renderAdminTable();
     }
 
-    // 計算金額：加入 Math.floor(total / 10) * 10 的自動去尾數邏輯
     function calc() {
         const subtotal = cart.reduce((a, b) => a + b.p, 0);
         const discountVal = Number(document.getElementById('discount').value || 0);
         let rawTotal = subtotal - discountVal;
-        
-        // 自動去尾數：以 10 元為單位向下取整 (例如 261 -> 260)
         let roundedTotal = Math.floor(rawTotal / 10) * 10;
         let finalTotal = Math.max(0, roundedTotal);
-        
         document.getElementById('final-total').innerText = finalTotal;
         calcChange();
     }
@@ -313,7 +327,6 @@
         document.getElementById('cash-change').innerText = p > t ? p - t : 0;
     }
 
-    // 快速折扣按鈕邏輯
     function applyQuickDiscount(type, val) {
         const subtotal = cart.reduce((a, b) => a + b.p, 0);
         const discInput = document.getElementById('discount');
@@ -327,7 +340,6 @@
         calc();
     }
 
-    // 快速實收金額按鈕邏輯
     function applyQuickCash(val) {
         const cashInput = document.getElementById('cash-in');
         if(val === 0) cashInput.value = '';
@@ -339,14 +351,12 @@
         const y = document.getElementById('stat-year').value;
         const m = document.getElementById('stat-month').value;
         let filtered = orders;
-        
         if(!ignoreTime) {
             filtered = orders.filter(o => {
                 const parts = o.d.split('/');
                 return parts[0] == y && parts[1] == m;
             });
         }
-
         let stats = {};
         filtered.forEach(o => {
             (o.items || []).forEach(it => {
@@ -355,7 +365,6 @@
                 stats[it.n].amt += it.p;
             });
         });
-
         let sorted = Object.keys(stats).map(k => ({n:k, ...stats[k]})).sort((a,b) => b.qty - a.qty);
         document.getElementById('stat-tbody').innerHTML = sorted.map(s => `
             <tr><td style="text-align:left;">${s.n}</td><td>${s.qty}</td><td>${s.amt}</td></tr>
@@ -384,12 +393,7 @@
                     <td><input type="number" value="${it.s}" onchange="editItem(${ci},${ii},'s',this.value)" style="width:50px;"></td>
                     <td>
                         <select onchange="editItem(${ci},${ii},'color',this.value)" style="background:${it.color || '#fff'}; width:60px;">
-                            <option value="#FFFFFF">白</option>
-                            <option value="#FFC8B4" ${it.color==='#FFC8B4'?'selected':''}>紅</option>
-                            <option value="#FFFFBB" ${it.color==='#FFFFBB'?'selected':''}>黃</option>
-                            <option value="#BBFFEE" ${it.color==='#BBFFEE'?'selected':''}>藍</option>
-                            <option value="#CCFF99" ${it.color==='#CCFF99'?'selected':''}>綠</option>
-                            <option value="#E8CCFF" ${it.color==='#E8CCFF'?'selected':''}>紫</option>
+                            ${colorOptionsHtml.replace(`value="${it.color}"`, `value="${it.color}" selected`)}
                         </select>
                     </td>
                     <td><span onclick="delP(${ci},${ii})" class="del-x">✕</span></td>
@@ -399,7 +403,6 @@
         document.getElementById('admin-tbody').innerHTML = html;
     }
 
-    // --- 基礎 POS 功能 ---
     function addCart(id) {
         let target = null;
         inv.forEach(c => (c.items || []).forEach(i => { if(i.id === id) target = i; }));
@@ -445,6 +448,34 @@
             </div>
         `).join('');
     }
+
+    // 修復：新增額外支出按鈕功能
+    function addExtraCost() {
+        const reason = prompt("請輸入支出項目名稱 (例如：補貨、文具)：");
+        if (!reason) return;
+        const amount = Number(prompt("請輸入支出金額："));
+        if (isNaN(amount) || amount <= 0) return alert("請輸入有效金額");
+
+        const orderDate = document.getElementById('backdate-mode').checked ? 
+            new Date(document.getElementById('manual-date').value).toLocaleDateString('zh-TW') : 
+            new Date().toLocaleDateString('zh-TW');
+
+        const expenseData = {
+            t: new Date().toLocaleTimeString('zh-TW', {hour12:false}),
+            d: orderDate,
+            total: -amount, // 負數代表支出
+            profit: -amount,
+            pay: '支出',
+            items: [{ id: 'EXP', n: `[支出] ${reason}`, p: -amount, c: 0 }],
+            note: reason
+        };
+
+        if(db) {
+            db.ref('orders').push(expenseData);
+            alert("支出紀錄已儲存！");
+        }
+    }
+
     function addNewProduct() {
         const catN = document.getElementById('select-cat').value;
         const id = document.getElementById('new-id').value;
@@ -471,12 +502,40 @@
     function toggleAdmin() { const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; if(p.style.display === 'flex') { renderAdminTable(); renderStatTable(); } }
     function toggleHistory() { const p = document.getElementById('history-panel'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; }
     function jumpToAdminCat(val) { if(val) document.getElementById(val).scrollIntoView({behavior: "smooth"}); }
-    function syncOfflineData() { db.ref('inventory').set(inv); alert("同步成功"); }
+    function syncOfflineData() { db.ref('inventory').set(inv); alert("同步庫存成功"); }
     function moveCategory(ci, dir) { if(ci + dir >= 0 && ci + dir < inv.length) { const temp = inv[ci]; inv[ci] = inv[ci + dir]; inv[ci + dir] = temp; syncToDB(); } }
     function editCategoryName(ci) { const n = prompt("請修改分類名稱：", inv[ci].cat); if (n) { inv[ci].cat = n; syncToDB(); } }
     function deleteCategory(ci) { if(confirm(`⚠️ 確定要刪除「${inv[ci].cat}」及其所有商品？`)) { inv.splice(ci, 1); if(inv.length === 0) inv = [{cat: "新分類", items: []}]; syncToDB(); } }
 
-    /** 修正部分：新增歷史紀錄查詢與退貨功能 **/
+    // 新增：清空所有歷史紀錄
+    function clearAllHistory() {
+        if (confirm("⚠️ 警告：確定要清空『所有』銷售紀錄嗎？此動作無法復原！")) {
+            if (confirm("再次確認：您真的要刪除資料庫中所有的訂單資料嗎？")) {
+                db.ref('orders').remove();
+                alert("所有歷史紀錄已清空。");
+                searchHistory('day'); // 刷新顯示
+            }
+        }
+    }
+
+    // 新增：匯出歷史紀錄至 Excel
+    function exportHistoryToExcel() {
+        if (orders.length === 0) return alert("沒有資料可供匯出");
+        const exportData = orders.map(o => ({
+            "日期": o.d,
+            "時間": o.t,
+            "內容": o.items.map(i => i.n).join(', '),
+            "總金額": o.total,
+            "利潤": o.profit,
+            "支付方式": o.pay,
+            "備註": o.note || ""
+        }));
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "銷售紀錄");
+        XLSX.writeFile(wb, `時光造所_銷售紀錄_${new Date().toLocaleDateString()}.xlsx`);
+    }
+
     function searchHistory(type) {
         let filtered = [];
         const resArea = document.getElementById('history-result-area');
@@ -487,7 +546,7 @@
             const targetDate = new Date(dateVal).toLocaleDateString('zh-TW');
             filtered = orders.filter(o => o.d === targetDate);
         } else {
-            const monthVal = document.getElementById('search-month').value; // YYYY-MM
+            const monthVal = document.getElementById('search-month').value; 
             if (!monthVal) return alert("請選擇月份");
             const [y, m] = monthVal.split('-');
             filtered = orders.filter(o => {
@@ -526,30 +585,64 @@
         resArea.innerHTML = filtered.length ? html : '<div style="text-align:center; padding:20px; color:#999;">查無資料</div>';
     }
 
+    // 修復：補完原本遺漏的 refundOrder
     function refundOrder(key) {
         if (!confirm("⚠️ 確定要退貨此訂單？\n此操作將刪除紀錄並自動還原庫存量。")) return;
         
         const targetOrder = orders.find(o => o.firebaseKey === key);
         if (targetOrder) {
-            // 還原庫存
             targetOrder.items.forEach(refundItem => {
                 inv.forEach(cat => {
                     (cat.items || []).forEach(invItem => {
-                        if (invItem.id === refundItem.id) invItem.s++;
+                        if(invItem.id === refundItem.id) invItem.s++;
                     });
                 });
             });
-            
-            // 刪除 Firebase 中的紀錄並更新庫存
             db.ref('orders/' + key).remove();
             db.ref('inventory').set(inv);
-            alert("退貨成功，庫存已回補");
-            // 重新整理顯示 (直接觸發當前的查詢)
-            const dateVal = document.getElementById('search-date').value;
-            const monthVal = document.getElementById('search-month').value;
-            if (dateVal) searchHistory('day');
-            else if (monthVal) searchHistory('month');
+            alert("退貨處理完成，庫存已回補。");
         }
+    }
+
+    // 庫存匯出 Excel
+    function exportToExcel() {
+        let data = [];
+        inv.forEach(c => {
+            (c.items || []).forEach(i => {
+                data.push({ "分類": c.cat, "代碼": i.id, "品名": i.n, "成本": i.c, "售價": i.p, "庫存": i.s });
+            });
+        });
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+        XLSX.writeFile(wb, "時光造所_庫存資料.xlsx");
+    }
+
+    function backupData() {
+        const data = JSON.stringify({inv, orders});
+        const blob = new Blob([data], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `POS_Backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+    }
+
+    function importData(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const data = JSON.parse(evt.target.result);
+                if(confirm("確定要還原數據？這將覆蓋現有所有資料！")) {
+                    if(data.inv) db.ref('inventory').set(data.inv);
+                    if(data.orders) db.ref('orders').set(data.orders);
+                    alert("還原成功");
+                    location.reload();
+                }
+            } catch(err) { alert("檔案格式錯誤"); }
+        };
+        reader.readAsText(file);
     }
 </script>
 </body>
