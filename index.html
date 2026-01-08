@@ -28,7 +28,16 @@
         #cart-list { max-height: 200px; overflow-y: auto; border-bottom: 2px dashed #e8e0d9; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 5px; font-size: 1.1em; border-bottom: 1px solid #eee; }
         .big-input { font-size: 1.8em; padding: 12px; width: 100%; border-radius: 10px; border: 2px solid #d1c7bc; text-align: right; box-sizing: border-box; background: #fffcf5; font-weight: bold; }
-        .small-note { font-size: 1em; padding: 8px; width: 100%; border-radius: 8px; border: 1px solid #d1c7bc; box-sizing: border-box; margin-top: 5px; }
+        .small-note { 
+    font-size: 1.1em; /* 稍微加大字體 */
+    padding: 10px; 
+    width: 100%; 
+    border-radius: 8px; 
+    border: 1px solid #d1c7bc; 
+    box-sizing: border-box; 
+    margin-top: 5px; 
+    appearance: none; /* 讓手機版顯示更一致 */
+}
         .total-display { font-size: 3.2em; font-weight: bold; color: var(--price-red); text-align: right; margin: 10px 0; }
         .pay-btn { flex: 1; padding: 15px; border-radius: 10px; border: 1px solid #ccc; background: white; cursor: pointer; font-weight: bold; font-size: 1.3em;}
         .pay-btn.active { background: var(--accent-brown); color: white; border-color: var(--accent-brown); }
@@ -65,7 +74,15 @@
             <div id="cart-list"></div>
             <div style="margin-top:10px;">
                 <input type="number" id="discount" class="big-input" placeholder="折扣金額" oninput="calc()">
-                <input type="text" id="discount-note" class="small-note" placeholder="折扣原因/備註 (例如: 滿額贈)">
+                <select id="discount-note" class="small-note" style="background: white;">
+    <option value="">-- 選擇折扣原因 --</option>
+    <option value="追蹤">📱 追蹤</option>
+    <option value="朋友">🤝 朋友</option>
+    <option value="2件以上">✌️ 2件以上</option>
+    <option value="3件以上">🤟 3件以上</option>
+    <option value="滿額贈">🎁 滿額贈</option>
+    <option value="其他">📝 其他</option>
+</select>
                 <div style="margin-top:5px; display:flex; gap:5px;">
                     <button onclick="addExtraCost()" style="flex:1; padding:8px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; border-radius:8px; cursor:pointer; font-size:0.9em; font-weight:bold;">➕ 紀錄額外支出</button>
                 </div>
@@ -477,7 +494,7 @@
         
         cart=[]; 
         document.getElementById('discount').value = '';
-        document.getElementById('discount-note').value = '';
+       document.getElementById('discount-note').selectedIndex = 0;
         document.getElementById('cash-in').value = '';
         renderCart(); 
         syncToDB();
@@ -525,6 +542,7 @@
 </script>
 </body>
 </html>
+
 
 
 
