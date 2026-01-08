@@ -34,15 +34,16 @@
         .pay-btn.active { background: var(--accent-brown); color: white; border-color: var(--accent-brown); }
         #admin-panel, #history-panel { position: fixed; inset: 10px; background: white; z-index: 1000; border-radius: 20px; display: none; flex-direction: column; padding: 15px; border: 3px solid var(--main-brown); box-shadow: 0 0 50px rgba(0,0,0,0.3); }
         .admin-layout { display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; }
-        @media (min-width: 768px) { .admin-layout { display: grid; grid-template-columns: 1.5fr 1fr; } }
+        @media (min-width: 768px) { .admin-layout { display: grid; grid-template-columns: 1.8fr 1fr; } }
         .add-row-top { background: #f0fdf4; padding: 15px; border: 2px solid var(--profit-green); border-radius: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
         .admin-table-container { overflow: auto; border: 1px solid #eee; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #f4f4f4; position: sticky; top: 0; padding: 10px; border: 1px solid #ddd; z-index: 5; }
+        th { background: #f4f4f4; position: sticky; top: 0; padding: 10px; border: 1px solid #ddd; z-index: 5; font-size: 0.9em; }
         td { padding: 8px; border: 1px solid #ddd; text-align: center; }
         .del-x { color: red; font-weight: bold; cursor: pointer; font-size: 1.4em; }
-        .edit-cat-btn { background: #3182ce; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-left: 10px; }
-        .del-cat-btn { background: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-left: 10px; }
+        .edit-cat-btn { background: #3182ce; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-left: 5px; }
+        .del-cat-btn { background: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-left: 5px; }
+        .sort-cat-btn { background: #8c7b6c; color: white; border: none; padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-left: 5px; }
     </style>
 </head>
 <body>
@@ -161,7 +162,7 @@
     <div class="admin-layout">
         <div class="admin-table-container">
             <table>
-                <thead><tr><th>順序</th><th>品名</th><th>成本</th><th>售價</th><th>庫存</th><th>色塊</th><th>刪</th></tr></thead>
+                <thead><tr><th>順序</th><th>代碼</th><th>品名</th><th>成本</th><th>售價</th><th>庫存</th><th>色塊</th><th>刪</th></tr></thead>
                 <tbody id="admin-tbody"></tbody>
             </table>
         </div>
@@ -378,6 +379,16 @@
         if (n) { inv[ci].cat = n; syncToDB(); }
     }
 
+    // 新增：移動分類順序的功能
+    function moveCategory(ci, dir) {
+        if(ci + dir >= 0 && ci + dir < inv.length) {
+            const temp = inv[ci];
+            inv[ci] = inv[ci + dir];
+            inv[ci + dir] = temp;
+            syncToDB();
+        }
+    }
+
     function updateCatSelect() {
         const sel = document.getElementById('select-cat');
         if(sel) {
@@ -390,16 +401,19 @@
         let html = '';
         inv.forEach((cat, ci) => {
             html += `<tr id="ac${ci}" style="background:#eee;">
-                <td colspan="7" style="text-align:left; padding:10px;">
+                <td colspan="8" style="text-align:left; padding:10px;">
                     <b>📂 ${cat.cat}</b>
-                    <button class="edit-cat-btn" onclick="editCategoryName(${ci})">✏️</button>
-                    <button class="del-cat-btn" onclick="deleteCategory(${ci})">🗑️</button>
+                    <button class="sort-cat-btn" onclick="moveCategory(${ci}, -1)">↑</button>
+                    <button class="sort-cat-btn" onclick="moveCategory(${ci}, 1)">↓</button>
+                    <button class="edit-cat-btn" onclick="editCategoryName(${ci})">✏️ 改名</button>
+                    <button class="del-cat-btn" onclick="deleteCategory(${ci})">🗑️ 刪除</button>
                 </td>
             </tr>`;
             (cat.items || []).forEach((it, ii) => {
                 html += `<tr>
                     <td><span onclick="move(${ci},${ii},-1)" style="cursor:pointer">↑</span> <span onclick="move(${ci},${ii},1)" style="cursor:pointer">↓</span></td>
-                    <td style="text-align:left;"><input type="text" value="${it.n}" onchange="editItem(${ci},${ii},'n',this.value)" class="admin-input-large"></td>
+                    <td><input type="text" value="${it.id || ''}" onchange="editItem(${ci},${ii},'id',this.value)" style="width:50px; text-align:center;"></td>
+                    <td style="text-align:left;"><input type="text" value="${it.n}" onchange="editItem(${ci},${ii},'n',this.value)" class="admin-input-large" style="width:140px;"></td>
                     <td><input type="number" value="${it.c}" onchange="editItem(${ci},${ii},'c',this.value)" style="width:50px;"></td>
                     <td><input type="number" value="${it.p}" onchange="editItem(${ci},${ii},'p',this.value)" style="width:50px;"></td>
                     <td><input type="number" value="${it.s}" onchange="editItem(${ci},${ii},'s',this.value)" style="width:50px;"></td>
@@ -530,7 +544,15 @@
         renderCart();
     }
 
-    function editItem(ci, ii, k, v) { inv[ci].items[ii][k] = (k==='n'?v:(k==='color'?v:Number(v))); syncToDB(); }
+    function editItem(ci, ii, k, v) { 
+        if(k === 'n' || k === 'id' || k === 'color') {
+            inv[ci].items[ii][k] = v;
+        } else {
+            inv[ci].items[ii][k] = Number(v);
+        }
+        syncToDB(); 
+    }
+    
     function move(ci, ii, dir) { 
         let items = inv[ci].items; 
         if(ii+dir>=0 && ii+dir<items.length){ [items[ii], items[ii+dir]]=[items[ii+dir], items[ii]]; renderAdminTable(); syncToDB(); }
