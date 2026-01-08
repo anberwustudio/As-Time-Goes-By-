@@ -156,9 +156,19 @@
         <div><label>品名</label><input type="text" id="new-n" style="width:180px;"></div>
         <div><label>成本</label><input type="number" id="new-c" style="width:60px;"></div>
         <div><label>售價</label><input type="number" id="new-p" style="width:60px;"></div>
-        <div><label>庫存</label><input type="number" id="new-s" style="width:60px;"></div>
-        <button onclick="addNewProduct()" style="background:var(--profit-green); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">➕ 新增商品</button>
-    </div>
+       <div><label>庫存</label><input type="number" id="new-s" style="width:60px;"></div>
+<div>
+    <label>底色</label>
+    <select id="new-color" style="padding:5px; border-radius:5px;">
+        <option value="#FFFFFF">預設白</option>
+        <option value="#FFC8B4">紅色</option>
+        <option value="#FFFFBB">黃色</option>
+        <option value="#BBFFEE">藍色</option>
+        <option value="#CCFF99">綠色</option>
+        <option value="#E8CCFF">紫色</option>
+    </select>
+</div>
+<button onclick="addNewProduct()" style="background:var(--profit-green); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">➕ 新增商品</button>
 
     <div class="admin-layout">
         <div class="admin-table-container">
@@ -248,8 +258,8 @@
                 gridHtml += `<div style="color:#999; padding:10px;">此分類暫無商品</div>`;
             } else {
                 cat.items.forEach(it => {
-                    gridHtml += `<div class="p-btn" onclick="addCart('${it.id}')">
-                        <div class="p-name">${it.id} ${it.n}</div>
+                    gridHtml += `<div class="p-btn" onclick="addCart('${it.id}')" style="background-color: ${it.color || '#FFFFFF'}">
+    <div class="p-name">${it.id} ${it.n}</div>
                         <div class="p-price">$${it.p}</div>
                         <div class="p-stock">存:${it.s}</div>
                     </div>`;
@@ -404,6 +414,16 @@
                     <td><input type="number" value="${it.c}" onchange="editItem(${ci},${ii},'c',this.value)" style="width:50px;"></td>
                     <td><input type="number" value="${it.p}" onchange="editItem(${ci},${ii},'p',this.value)" style="width:50px;"></td>
                     <td><input type="number" value="${it.s}" onchange="editItem(${ci},${ii},'s',this.value)" style="width:50px;"></td>
+                    <td>
+    <select onchange="editItem(${ci},${ii},'color',this.value)" style="background:${it.color || '#FFF'}">
+        <option value="#FFFFFF" ${it.color=='#FFFFFF'?'selected':''}>白</option>
+        <option value="#FFC8B4" ${it.color=='#FFC8B4'?'selected':''}>紅</option>
+        <option value="#FFFFBB" ${it.color=='#FFFFBB'?'selected':''}>黃</option>
+        <option value="#BBFFEE" ${it.color=='#BBFFEE'?'selected':''}>藍</option>
+        <option value="#CCFF99" ${it.color=='#CCFF99'?'selected':''}>綠</option>
+        <option value="#E8CCFF" ${it.color=='#E8CCFF'?'selected':''}>紫</option>
+    </select>
+</td>
                     <td><span onclick="delP(${ci},${ii})" class="del-x">✕</span></td>
                 </tr>`;
             });
@@ -420,7 +440,8 @@
         const category = inv.find(v => v.cat === catN);
         if(category) {
             if(!category.items) category.items = [];
-            category.items.push({id: id || Date.now().toString().slice(-4), n, c, p, s});
+            const color = document.getElementById('new-color').value;
+category.items.push({id: id || Date.now().toString().slice(-4), n, c, p, s, color: color});
             syncToDB();
             ['new-id','new-n','new-c','new-p','new-s'].forEach(f => document.getElementById(f).value='');
         }
@@ -542,6 +563,7 @@
 </script>
 </body>
 </html>
+
 
 
 
