@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>As Time Goes By 時光造所 -POS</title>
+    
+    <link rel="icon" href="您的LOGO圖片網址" type="image/x-icon">
+    <link rel="shortcut icon" href="您的LOGO圖片網址" type="image/png">
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -11,7 +15,22 @@
     <style>
         :root { --main-brown: #b0a496; --bg-cream: #fcf8f5; --accent-brown: #8c7b6c; --price-red: #d9534f; --profit-green: #6b8e23; }
         body { font-family: sans-serif; background: var(--bg-cream); margin: 0; display: flex; flex-direction: column; height: 100dvh; color: #5d5246; overflow: hidden; padding-bottom: env(safe-area-inset-bottom); }
-        header { background: var(--main-brown); color: white; padding: 12px; text-align: center; font-size: 1.3em; font-weight: bold; flex-shrink: 0; }
+        
+        header { 
+            background: var(--main-brown); 
+            color: white; 
+            padding: 8px 12px; 
+            text-align: center; 
+            font-size: 1.3em; 
+            font-weight: bold; 
+            flex-shrink: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+        }
+        header img { height: 30px; width: auto; border-radius: 4px; }
+
         .nav-bar { background: #e8e0d9; padding: 10px; display: flex; gap: 10px; overflow-x: auto; border-bottom: 2px solid #d1c7bc; flex-shrink: 0; align-items: center; }
         .nav-btn { background: white; border: 1px solid #d1c7bc; padding: 8px 18px; border-radius: 20px; white-space: nowrap; cursor: pointer; font-size: 1.1em; }
         .sync-btn { background: #ff9800; color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-left: auto; }
@@ -38,7 +57,7 @@
         .q-btn { flex: 1; padding: 8px 2px; font-size: 0.85em; border: 1px solid #d1c7bc; background: #fcfaf8; border-radius: 6px; cursor: pointer; white-space: nowrap; text-align: center; }
         
         .total-display { font-size: 3em; font-weight: bold; color: var(--price-red); text-align: right; margin: 5px 0; }
-        .pay-btn { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #ccc; background: white; cursor: pointer; font-weight: bold; font-size: 1.2em;}
+        .pay-btn { flex: 1; padding: 10px 4px; border-radius: 10px; border: 1px solid #ccc; background: white; cursor: pointer; font-weight: bold; font-size: 0.9em; white-space: nowrap; }
         .pay-btn.active { background: var(--accent-brown); color: white; border-color: var(--accent-brown); }
         
         #order-log-container { min-height: 250px; flex: 1; display: flex; flex-direction: column; }
@@ -57,13 +76,25 @@
         .edit-cat-btn { background: #3182ce; }
         .del-cat-btn { background: #ff4d4d; }
         .sort-cat-btn { background: #8c7b6c; }
+
+        #receipt-temp { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #receipt-temp, #receipt-temp * { visibility: visible; }
+            #receipt-temp { display: block; position: absolute; left: 0; top: 0; width: 58mm; padding: 2mm; font-size: 12px; }
+        }
     </style>
 </head>
 <body>
 
-<header>As Time Goes By 時光造所 -POS</header>
+<header>
+    <img src="您的LOGO圖片網址" alt="LOGO"> 
+    As Time Goes By 時光造所 -POS
+</header>
+
 <div class="nav-bar">
     <div id="navbar" style="display:flex; gap:10px;"></div>
+    <div id="barcode-status" style="padding: 5px 10px; background: #eee; border-radius: 10px; font-size: 0.8em;">⌛ 條碼槍就緒</div>
     <button class="sync-btn" onclick="syncOfflineData()">🔄 離線數據同步</button>
 </div>
 
@@ -71,7 +102,14 @@
     <div class="item-area" id="item-area">同步中...</div>
     <div class="checkout-area">
         <div class="card">
-            <strong>🛒 當前清單</strong>
+            <strong>🛒 當前清單 (條碼掃描中...)</strong>
+            
+            <div style="margin: 8px 0;">
+                <input type="text" id="manual-barcode-input" placeholder="掃描或手動輸入商品代碼..." 
+                       style="width:100%; padding:10px; border:2px solid var(--main-brown); border-radius:10px; box-sizing:border-box; font-size:1em;"
+                       onkeypress="if(event.key === 'Enter') { handleManualBarcode(this.value); this.value=''; }">
+            </div>
+
             <div id="cart-list"></div>
             <div style="margin-top:10px;">
                 <input type="number" id="discount" class="big-input" placeholder="折扣金額" oninput="calc()">
@@ -98,14 +136,17 @@
                 </div>
             </div>
             <div class="total-display">$<span id="final-total">0</span></div>
-            <div style="display:flex; gap:8px; margin-bottom:10px;">
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-bottom:10px;">
                 <button class="pay-btn active" id="btn-cash" onclick="setPay('現金')">💵 現金</button>
-                <button class="pay-btn" id="btn-elec" onclick="setPay('電支')">📱 電支</button>
+                <button class="pay-btn" id="btn-card" onclick="setPay('信用卡')">💳 信用卡</button>
+                <button class="pay-btn" id="btn-line" onclick="setPay('LINE Pay')">🟢 LINEPay</button>
             </div>
+
+            <input type="text" id="tax-id" class="small-note" placeholder="載具 / 統編 (可不填)" style="text-align: center; margin-bottom: 8px; border: 1px solid #8c7b6c;">
+
             <input type="number" id="cash-in" class="big-input" placeholder="實收金額" oninput="calcChange()"> 
             <div class="quick-btn-row">
-                <button class="q-btn" onclick="applyQuickCash(10)">$10</button>
-                <button class="q-btn" onclick="applyQuickCash(50)">$50</button>
                 <button class="q-btn" onclick="applyQuickCash(100)">$100</button>
                 <button class="q-btn" onclick="applyQuickCash(500)">$500</button>
                 <button class="q-btn" onclick="applyQuickCash(1000)">$1000</button>
@@ -130,6 +171,8 @@
         </div>
     </div>
 </div>
+
+<div id="receipt-temp"></div>
 
 <div style="padding:10px; text-align:center; display: flex; justify-content: center; gap: 10px; flex-shrink: 0; margin-bottom: 5px;">
     <button onclick="toggleAdmin()" style="padding:15px 25px; border-radius:15px; background:white; border:3px solid var(--main-brown); font-weight:bold; font-size:1.1em; cursor:pointer;">🛠️ 商品管理 / 統計</button>
@@ -244,7 +287,6 @@
     let cart = []; 
     let currentPay = '現金';
 
-    // 色塊 HTML 選項通用字串
     const colorOptionsHtml = `
         <option value="#FFFFFF">白</option>
         <option value="#FF0000">紅</option>
@@ -257,6 +299,42 @@
         <option value="#CCEEFF">冰藍</option>
         <option value="#EEFFBB">綠</option>
     `;
+
+    // --- 條碼掃描與手動輸入優化 ---
+    let barcodeString = "";
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+
+        if (e.key === "Enter") {
+            if (barcodeString.length > 1) {
+                handleManualBarcode(barcodeString);
+            }
+            barcodeString = "";
+        } else {
+            if (e.key.length === 1) barcodeString += e.key;
+        }
+    });
+
+    // 統一處理掃描與手動輸入的邏輯
+    function handleManualBarcode(val) {
+        if(!val) return;
+        const found = findProductById(val);
+        const statusEl = document.getElementById('barcode-status');
+        if (found) {
+            addCart(found.id);
+            statusEl.innerText = `✅ 已掃描: ${found.n}`;
+            statusEl.style.background = "#dcfce7";
+        } else {
+            statusEl.innerText = `❌ 找不到代碼: ${val}`;
+            statusEl.style.background = "#fee2e2";
+        }
+    }
+
+    function findProductById(id) {
+        let target = null;
+        inv.forEach(c => (c.items || []).forEach(i => { if(String(i.id) === String(id)) target = i; }));
+        return target;
+    }
 
     function loadData() {
         if(db) {
@@ -347,6 +425,14 @@
         calcChange();
     }
 
+    function setPay(method) {
+        currentPay = method;
+        document.querySelectorAll('.pay-btn').forEach(btn => btn.classList.remove('active'));
+        if(method === '現金') document.getElementById('btn-cash').classList.add('active');
+        if(method === '信用卡') document.getElementById('btn-card').classList.add('active');
+        if(method === 'LINE Pay') document.getElementById('btn-line').classList.add('active');
+    }
+
     function renderStatTable(ignoreTime = false) {
         const y = document.getElementById('stat-year').value;
         const m = document.getElementById('stat-month').value;
@@ -404,8 +490,7 @@
     }
 
     function addCart(id) {
-        let target = null;
-        inv.forEach(c => (c.items || []).forEach(i => { if(i.id === id) target = i; }));
+        let target = findProductById(id);
         if(target) { cart.push({...target}); renderCart(); }
     }
     function renderCart() {
@@ -414,12 +499,14 @@
             <span onclick="cart.splice(${i},1);renderCart()" style="color:red; cursor:pointer;">✕</span></div>`).join('');
         calc();
     }
+    
     function submitOrder() {
         if(!cart.length) return;
         const total = Number(document.getElementById('final-total').innerText);
         const orderDate = document.getElementById('backdate-mode').checked ? 
             new Date(document.getElementById('manual-date').value).toLocaleDateString('zh-TW') : 
             new Date().toLocaleDateString('zh-TW');
+        const taxId = document.getElementById('tax-id').value;
             
         const orderData = { 
             t: new Date().toLocaleTimeString('zh-TW', {hour12:false}), 
@@ -428,17 +515,53 @@
             profit: total - cart.reduce((a,b)=>a+(b.c||0), 0), 
             pay: currentPay, 
             items: [...cart], 
-            note: document.getElementById('discount-note').value 
+            note: document.getElementById('discount-note').value,
+            taxId: taxId
         };
+
         cart.forEach(item => { inv.forEach(c => (c.items || []).forEach(i => { if(i.id === item.id) i.s--; })); });
+        
         db.ref('orders').push(orderData);
         db.ref('inventory').set(inv);
-        alert("結帳成功！");
+
+        printReceipt(orderData);
+        alert("結帳成功！收據列印中...");
+        
         cart=[]; 
         document.getElementById('discount').value = '';
         document.getElementById('cash-in').value = '';
+        document.getElementById('tax-id').value = '';
+        document.getElementById('barcode-status').innerText = '⌛ 條碼槍就緒';
+        document.getElementById('barcode-status').style.background = "#eee";
         renderCart(); 
     }
+
+    function printReceipt(order) {
+        const receipt = document.getElementById('receipt-temp');
+        let itemsHtml = order.items.map(i => `<tr><td colspan="2">${i.n}</td><td style="text-align:right;">${i.p}</td></tr>`).join('');
+        
+        receipt.innerHTML = `
+            <div style="text-align:center;">
+                <h2 style="margin:0;">時光造所</h2>
+                <p>收據存根</p>
+                <hr>
+            </div>
+            <p>日期: ${order.d} ${order.t}</p>
+            <p>支付方式: ${order.pay}</p>
+            ${order.taxId ? `<p>載具/統編: ${order.taxId}</p>` : ''}
+            <table style="width:100%; border-bottom:1px solid #000;">
+                ${itemsHtml}
+            </table>
+            <div style="text-align:right; font-size:1.4em; font-weight:bold; margin-top:10px;">
+                總計: $${order.total}
+            </div>
+            <div style="text-align:center; margin-top:20px;">
+                <p>~ 謝謝惠顧 ~</p>
+            </div>
+        `;
+        window.print();
+    }
+
     function updateLog() {
         const today = new Date().toLocaleDateString('zh-TW');
         const todayOrders = orders.filter(o => o.d === today);
@@ -449,7 +572,6 @@
         `).join('');
     }
 
-    // 修復：新增額外支出按鈕功能
     function addExtraCost() {
         const reason = prompt("請輸入支出項目名稱 (例如：補貨、文具)：");
         if (!reason) return;
@@ -463,7 +585,7 @@
         const expenseData = {
             t: new Date().toLocaleTimeString('zh-TW', {hour12:false}),
             d: orderDate,
-            total: -amount, // 負數代表支出
+            total: -amount, 
             profit: -amount,
             pay: '支出',
             items: [{ id: 'EXP', n: `[支出] ${reason}`, p: -amount, c: 0 }],
@@ -473,6 +595,29 @@
         if(db) {
             db.ref('orders').push(expenseData);
             alert("支出紀錄已儲存！");
+        }
+    }
+
+    function toggleAdmin() {
+        const p = document.getElementById('admin-panel');
+        p.style.display = (p.style.display === 'flex' ? 'none' : 'flex');
+        if(p.style.display === 'flex') renderAdminTable();
+    }
+
+    function updateCatSelect() {
+        const sel = document.getElementById('select-cat');
+        sel.innerHTML = inv.map(c => `<option value="${c.cat}">${c.cat}</option>`).join('') + '<option value="new">+ 新增分類</option>';
+    }
+
+    function checkNewCat(v) {
+        if(v === 'new') {
+            const n = prompt("新分類名稱:");
+            if(n) {
+                inv.push({cat: n, items: []});
+                syncToDB();
+            } else {
+                updateCatSelect();
+            }
         }
     }
 
@@ -488,142 +633,147 @@
         const category = inv.find(v => v.cat === catN);
         if(category) {
             if(!category.items) category.items = [];
-            category.items.push({ id: id || Date.now().toString().slice(-4), n, c, p, s, color }); 
+            category.items.push({ id: id || Date.now().toString().slice(-4), n, c, p, s, color });
             syncToDB();
-            ['new-id','new-n','new-c','new-p','new-s'].forEach(f => document.getElementById(f).value = '');
-        }
-    }
-    function editItem(ci, ii, k, v) { if(k==='n'||k==='id'||k==='color') inv[ci].items[ii][k]=v; else inv[ci].items[ii][k]=Number(v); syncToDB(); }
-    function move(ci, ii, dir) { let items = inv[ci].items; if(ii+dir>=0 && ii+dir<items.length){ [items[ii], items[ii+dir]]=[items[ii+dir], items[ii]]; syncToDB(); } }
-    function delP(ci, ii) { if(confirm("確定刪除？")){ inv[ci].items.splice(ii,1); syncToDB(); } }
-    function checkNewCat(v) { if(v==="ADD") { const n = prompt("名稱？"); if(n){ inv.push({cat:n, items:[]}); syncToDB(); } document.getElementById('select-cat').selectedIndex=0; } }
-    function updateCatSelect() { const sel = document.getElementById('select-cat'); if(sel) sel.innerHTML = inv.map(c => `<option value="${c.cat}">${c.cat}</option>`).join('') + `<option value="ADD">➕ 新增</option>`; }
-    function setPay(m) { currentPay = m; document.getElementById('btn-cash').className = m==='現金'?'pay-btn active':'pay-btn'; document.getElementById('btn-elec').className = m==='電支'?'pay-btn active':'pay-btn'; }
-    function toggleAdmin() { const p = document.getElementById('admin-panel'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; if(p.style.display === 'flex') { renderAdminTable(); renderStatTable(); } }
-    function toggleHistory() { const p = document.getElementById('history-panel'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; }
-    function jumpToAdminCat(val) { if(val) document.getElementById(val).scrollIntoView({behavior: "smooth"}); }
-    function syncOfflineData() { db.ref('inventory').set(inv); alert("同步庫存成功"); }
-    function moveCategory(ci, dir) { if(ci + dir >= 0 && ci + dir < inv.length) { const temp = inv[ci]; inv[ci] = inv[ci + dir]; inv[ci + dir] = temp; syncToDB(); } }
-    function editCategoryName(ci) { const n = prompt("請修改分類名稱：", inv[ci].cat); if (n) { inv[ci].cat = n; syncToDB(); } }
-    function deleteCategory(ci) { if(confirm(`⚠️ 確定要刪除「${inv[ci].cat}」及其所有商品？`)) { inv.splice(ci, 1); if(inv.length === 0) inv = [{cat: "新分類", items: []}]; syncToDB(); } }
-
-    // 新增：清空所有歷史紀錄
-    function clearAllHistory() {
-        if (confirm("⚠️ 警告：確定要清空『所有』銷售紀錄嗎？此動作無法復原！")) {
-            if (confirm("再次確認：您真的要刪除資料庫中所有的訂單資料嗎？")) {
-                db.ref('orders').remove();
-                alert("所有歷史紀錄已清空。");
-                searchHistory('day'); // 刷新顯示
-            }
+            // 清空輸入欄位
+            document.getElementById('new-id').value='';
+            document.getElementById('new-n').value='';
+            document.getElementById('new-c').value='';
+            document.getElementById('new-p').value='';
+            document.getElementById('new-s').value='';
         }
     }
 
-    // 新增：匯出歷史紀錄至 Excel
-    function exportHistoryToExcel() {
-        if (orders.length === 0) return alert("沒有資料可供匯出");
-        const exportData = orders.map(o => ({
-            "日期": o.d,
-            "時間": o.t,
-            "內容": o.items.map(i => i.n).join(', '),
-            "總金額": o.total,
-            "利潤": o.profit,
-            "支付方式": o.pay,
-            "備註": o.note || ""
-        }));
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "銷售紀錄");
-        XLSX.writeFile(wb, `時光造所_銷售紀錄_${new Date().toLocaleDateString()}.xlsx`);
+    function editItem(ci, ii, field, val) {
+        if(field==='c' || field==='p' || field==='s') val = Number(val);
+        inv[ci].items[ii][field] = val;
+        syncToDB();
+    }
+
+    function delP(ci, ii) {
+        if(confirm("確定刪除此商品?")) {
+            inv[ci].items.splice(ii, 1);
+            syncToDB();
+        }
+    }
+
+    function move(ci, ii, dir) {
+        const items = inv[ci].items;
+        if(dir === -1 && ii > 0) [items[ii], items[ii-1]] = [items[ii-1], items[ii]];
+        if(dir === 1 && ii < items.length-1) [items[ii], items[ii+1]] = [items[ii+1], items[ii]];
+        syncToDB();
+    }
+
+    function moveCategory(ci, dir) {
+        if(dir === -1 && ci > 0) [inv[ci], inv[ci-1]] = [inv[ci-1], inv[ci]];
+        if(dir === 1 && ci < inv.length-1) [inv[ci], inv[ci+1]] = [inv[ci+1], inv[ci]];
+        syncToDB();
+    }
+
+    function editCategoryName(ci) {
+        const newN = prompt("修改分類名稱:", inv[ci].cat);
+        if(newN) { inv[ci].cat = newN; syncToDB(); }
+    }
+
+    function deleteCategory(ci) {
+        if(confirm(`確定刪除分類「${inv[ci].cat}」及其所有商品嗎？`)) {
+            inv.splice(ci, 1);
+            syncToDB();
+        }
+    }
+
+    function jumpToAdminCat(val) {
+        if(val) {
+            const el = document.getElementById(val);
+            if(el) el.scrollIntoView({behavior: "smooth"});
+        }
+    }
+
+    function toggleHistory() {
+        const p = document.getElementById('history-panel');
+        p.style.display = (p.style.display === 'flex' ? 'none' : 'flex');
     }
 
     function searchHistory(type) {
-        let filtered = [];
         const resArea = document.getElementById('history-result-area');
-        
-        if (type === 'day') {
-            const dateVal = document.getElementById('search-date').value;
-            if (!dateVal) return alert("請選擇日期");
-            const targetDate = new Date(dateVal).toLocaleDateString('zh-TW');
-            filtered = orders.filter(o => o.d === targetDate);
+        let filtered = [];
+        if(type === 'day') {
+            const d = document.getElementById('search-date').value;
+            if(!d) return alert("請選擇日期");
+            const targetD = new Date(d).toLocaleDateString('zh-TW');
+            filtered = orders.filter(o => o.d === targetD);
         } else {
-            const monthVal = document.getElementById('search-month').value; 
-            if (!monthVal) return alert("請選擇月份");
-            const [y, m] = monthVal.split('-');
+            const m = document.getElementById('search-month').value;
+            if(!m) return alert("請選擇月份");
             filtered = orders.filter(o => {
                 const parts = o.d.split('/');
-                return parts[0] == y && parts[1] == parseInt(m);
+                return `${parts[0]}-${parts[1].padStart(2,'0')}` === m;
             });
         }
 
-        const totalRevenue = filtered.reduce((a, b) => a + b.total, 0);
-        const totalProfit = filtered.reduce((a, b) => a + b.profit, 0);
+        let totalS = filtered.reduce((a,b)=>a+b.total, 0);
+        let totalP = filtered.reduce((a,b)=>a+b.profit, 0);
 
-        let html = `
-            <div style="margin-bottom:15px; padding:10px; background:#f0fdf4; border-radius:10px; border:1px solid #bcf0da;">
-                <h3 style="margin:0 0 5px 0;">📊 統計摘要</h3>
-                <span style="font-size:1.1em;">總筆數: <b>${filtered.length}</b> | 總營收: <b style="color:red;">$${totalRevenue}</b> | 總利潤: <b style="color:green;">$${totalProfit}</b></span>
+        resArea.innerHTML = `
+            <div style="background:#eee; padding:10px; border-radius:8px; margin-bottom:10px; font-weight:bold;">
+                總銷售額: $${totalS} | 總毛利: $${totalP}
             </div>
-            <table>
-                <thead>
-                    <tr><th>時間</th><th>內容</th><th>金額</th><th>支付</th><th>備註</th><th>操作</th></tr>
-                </thead>
-                <tbody>
+            ${filtered.map(o => `
+                <div style="border-bottom:1px solid #ddd; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <b>${o.d} ${o.t}</b> [${o.pay}]<br>
+                        ${o.items.map(i => i.n).join(', ')}<br>
+                        <small style="color:#666;">備註: ${o.note || '無'}</small>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-size:1.2em; font-weight:bold; color:var(--price-red);">$${o.total}</span><br>
+                        <button onclick="refundOrder('${o.firebaseKey}')" style="color:red; background:none; border:1px solid red; border-radius:4px; padding:2px 5px; cursor:pointer; margin-top:5px;">退貨</button>
+                    </div>
+                </div>
+            `).join('')}
         `;
-
-        html += filtered.map(o => `
-            <tr>
-                <td>${o.d}<br>${o.t}</td>
-                <td style="text-align:left; font-size:0.85em;">${o.items.map(i => i.n).join('<br>')}</td>
-                <td>$${o.total}</td>
-                <td>${o.pay}</td>
-                <td>${o.note || '-'}</td>
-                <td><button onclick="refundOrder('${o.firebaseKey}')" style="color:red; cursor:pointer; background:none; border:1px solid red; border-radius:4px; padding:2px 5px;">退貨</button></td>
-            </tr>
-        `).join('');
-
-        html += `</tbody></table>`;
-        resArea.innerHTML = filtered.length ? html : '<div style="text-align:center; padding:20px; color:#999;">查無資料</div>';
     }
 
-    // 修復：補完原本遺漏的 refundOrder
     function refundOrder(key) {
-        if (!confirm("⚠️ 確定要退貨此訂單？\n此操作將刪除紀錄並自動還原庫存量。")) return;
-        
-        const targetOrder = orders.find(o => o.firebaseKey === key);
-        if (targetOrder) {
-            targetOrder.items.forEach(refundItem => {
-                inv.forEach(cat => {
-                    (cat.items || []).forEach(invItem => {
-                        if(invItem.id === refundItem.id) invItem.s++;
-                    });
+        if(confirm("確定要進行退貨？這會刪除此筆交易並恢復庫存。")) {
+            const order = orders.find(o => o.firebaseKey === key);
+            if(order && order.pay !== '支出') {
+                order.items.forEach(item => {
+                    inv.forEach(c => (c.items || []).forEach(i => { if(i.id === item.id) i.s++; }));
                 });
-            });
-            db.ref('orders/' + key).remove();
-            db.ref('inventory').set(inv);
-            alert("退貨處理完成，庫存已回補。");
+                db.ref('inventory').set(inv);
+            }
+            db.ref('orders').child(key).remove();
+            alert("已完成退貨處置");
         }
     }
 
-    // 庫存匯出 Excel
     function exportToExcel() {
         let data = [];
-        inv.forEach(c => {
-            (c.items || []).forEach(i => {
-                data.push({ "分類": c.cat, "代碼": i.id, "品名": i.n, "成本": i.c, "售價": i.p, "庫存": i.s });
-            });
-        });
+        inv.forEach(c => (c.items || []).forEach(i => data.push({分類: c.cat, 代碼: i.id, 品名: i.n, 成本: i.c, 售價: i.p, 庫存: i.s})));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-        XLSX.writeFile(wb, "時光造所_庫存資料.xlsx");
+        XLSX.utils.book_append_sheet(wb, ws, "庫存");
+        XLSX.writeFile(wb, `時光造所_庫存_${new Date().toLocaleDateString()}.xlsx`);
+    }
+
+    function exportHistoryToExcel() {
+        let data = orders.map(o => ({
+            日期: o.d, 時間: o.t, 總額: o.total, 毛利: o.profit, 支付: o.pay, 備註: o.note, 載具統編: o.taxId || '',
+            內容: o.items.map(i => `${i.n}(${i.p})`).join(';')
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "歷史紀錄");
+        XLSX.writeFile(wb, `時光造所_銷售紀錄_${new Date().toLocaleDateString()}.xlsx`);
     }
 
     function backupData() {
-        const data = JSON.stringify({inv, orders});
-        const blob = new Blob([data], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
+        const data = { inv, orders };
+        const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
         const a = document.createElement('a');
-        a.href = url; a.download = `POS_Backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.href = URL.createObjectURL(blob);
+        a.download = `時光造所_備份_${new Date().getTime()}.json`;
         a.click();
     }
 
@@ -631,19 +781,33 @@
         const file = e.target.files[0];
         if(!file) return;
         const reader = new FileReader();
-        reader.onload = function(evt) {
+        reader.onload = (ev) => {
             try {
-                const data = JSON.parse(evt.target.result);
-                if(confirm("確定要還原數據？這將覆蓋現有所有資料！")) {
-                    if(data.inv) db.ref('inventory').set(data.inv);
+                const data = JSON.parse(ev.target.result);
+                if(data.inv && confirm("確定要還原備份資料嗎？這將覆蓋現有數據。")) {
+                    db.ref('inventory').set(data.inv);
                     if(data.orders) db.ref('orders').set(data.orders);
-                    alert("還原成功");
-                    location.reload();
+                    alert("還原成功！");
                 }
             } catch(err) { alert("檔案格式錯誤"); }
         };
         reader.readAsText(file);
     }
+
+    function syncOfflineData() {
+        alert("目前正處於在線模式，數據已即時同步。");
+    }
+
+    function clearAllHistory() {
+        if(confirm("⚠️ 警告：這將永久刪除所有歷史銷售紀錄，確定執行？")) {
+            if(confirm("請再次確認：此動作無法復原！")) {
+                db.ref('orders').remove();
+                alert("已清空歷史紀錄");
+            }
+        }
+    }
 </script>
+
 </body>
 </html>
+
