@@ -218,7 +218,7 @@
     
     <div class="add-row-top">
         <div><label>選擇分類</label><select id="select-cat" onchange="checkNewCat(this.value)"></select></div>
-        <div><label>代碼</label><input type="text" id="new-id" style="width:60px;"></div>
+        <div><label>代碼</label><input type="text" id="new-id" style="width:140px;"></div>
         <div><label>品名</label><input type="text" id="new-n" style="width:180px;"></div>
         <div><label>成本</label><input type="number" id="new-c" style="width:60px;"></div>
         <div><label>售價</label><input type="number" id="new-p" style="width:60px;"></div>
@@ -315,7 +315,6 @@
         }
     });
 
-    // 統一處理掃描與手動輸入的邏輯
     function handleManualBarcode(val) {
         if(!val) return;
         const found = findProductById(val);
@@ -332,7 +331,7 @@
 
     function findProductById(id) {
         let target = null;
-        inv.forEach(c => (c.items || []).forEach(i => { if(String(i.id) === String(id)) target = i; }));
+        inv.forEach(c => (c.items || []).forEach(i => { if(String(i.id).toUpperCase() === String(id).toUpperCase()) target = i; }));
         return target;
     }
 
@@ -472,7 +471,7 @@
             (cat.items || []).forEach((it, ii) => {
                 html += `<tr>
                     <td><span onclick="move(${ci},${ii},-1)" style="cursor:pointer">↑</span> <span onclick="move(${ci},${ii},1)" style="cursor:pointer">↓</span></td>
-                    <td><input type="text" value="${it.id || ''}" onchange="editItem(${ci},${ii},'id',this.value)" style="width:50px; text-align:center;"></td>
+                    <td><input type="text" value="${it.id || ''}" onchange="editItem(${ci},${ii},'id',this.value)" style="width:140px; text-align:center;"></td>
                     <td style="text-align:left;"><input type="text" value="${it.n}" onchange="editItem(${ci},${ii},'n',this.value)" style="width:140px;"></td>
                     <td><input type="number" value="${it.c}" onchange="editItem(${ci},${ii},'c',this.value)" style="width:50px;"></td>
                     <td><input type="number" value="${it.p}" onchange="editItem(${ci},${ii},'p',this.value)" style="width:50px;"></td>
@@ -810,4 +809,3 @@
 
 </body>
 </html>
-
