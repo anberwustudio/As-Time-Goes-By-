@@ -131,6 +131,9 @@
                     <button class="q-btn" onclick="applyQuickDiscount('percent', 0.8)">8折</button>
                     <button class="q-btn" onclick="applyQuickDiscount('reset', 0)" style="background:#eee;">重設</button>
                 </div>
+                <div class="quick-btn-row" style="margin-top:4px;">
+                    <button class="q-btn" onclick="applyQuickDiscount('minus', 50); document.getElementById('discount-note').value='購物金券';" style="background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">🎟️ 購物金券 (-$50)</button>
+                </div>
                 
                 <select id="discount-note" class="small-note" style="background: white;">
                     <option value="">-- 選擇折扣原因 --</option>
@@ -139,6 +142,7 @@
                     <option value="2件以上">✌️ 2件以上</option>
                     <option value="3件以上">🤟 3件以上</option>
                     <option value="滿額贈">🎁 滿額贈</option>
+                    <option value="購物金券">🎟️ 購物金券</option>
                     <option value="其他">📝 其他</option>
                 </select>
                 <div style="margin-top:5px; display:flex; gap:5px;">
@@ -161,6 +165,12 @@
                 <button class="q-btn" onclick="applyQuickCash(500)">$500</button>
                 <button class="q-btn" onclick="applyQuickCash(1000)">$1000</button>
                 <button class="q-btn" onclick="applyQuickCash(0)" style="background:#eee;">重設</button>
+            </div>
+            <div class="quick-btn-row" style="margin-top:4px;">
+                <button class="q-btn" onclick="applyQuickCash(1)">$1</button>
+                <button class="q-btn" onclick="applyQuickCash(5)">$5</button>
+                <button class="q-btn" onclick="applyQuickCash(10)">$10</button>
+                <button class="q-btn" onclick="applyQuickCash(50)">$50</button>
             </div>
             
             <div style="text-align:right; margin-top:5px; font-size: 1.3em;">找零: <span id="cash-change" style="font-weight:bold; color:red; font-size:1.8em;">0</span></div>
@@ -424,6 +434,7 @@
             discInput.value = Math.round(subtotal * (1 - val));
         } else if(type === 'reset') {
             discInput.value = '';
+            document.getElementById('discount-note').value = '';
         }
         calc();
     }
