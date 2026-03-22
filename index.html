@@ -106,14 +106,18 @@
         <div class="card">
             <strong>🛒 當前清單 (條碼掃描中...)</strong>
             
-            <div style="margin: 8px 0; display: flex; gap: 5px;">
+            <div style="margin: 8px 0; display: flex; flex-direction: column; gap: 5px;">
                 <input type="text" id="manual-barcode-input" placeholder="掃描或手動輸入代碼..." 
-                       style="flex: 1.5; padding:10px; border:2px solid var(--main-brown); border-radius:10px; box-sizing:border-box; font-size:1em;"
+                       style="width: 100%; padding:10px; border:2px solid var(--main-brown); border-radius:10px; box-sizing:border-box; font-size:1em;"
                        onkeypress="if(event.key === 'Enter') { handleManualBarcode(this.value); this.value=''; }">
                 
-                <input type="number" id="manual-price-input" placeholder="直接輸入金額..." 
-                       style="flex: 1; padding:10px; border:2px solid var(--accent-brown); border-radius:10px; box-sizing:border-box; font-size:1em;"
-                       onkeypress="if(event.key === 'Enter') { addCustomPrice(this.value); this.value=''; }">
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="manual-name-input" placeholder="商品名稱(自行輸入)..." 
+                           style="flex: 1.2; padding:10px; border:2px solid var(--accent-brown); border-radius:10px; box-sizing:border-box; font-size:1em;">
+                    <input type="number" id="manual-price-input" placeholder="金額..." 
+                           style="flex: 0.8; padding:10px; border:2px solid var(--accent-brown); border-radius:10px; box-sizing:border-box; font-size:1em;"
+                           onkeypress="if(event.key === 'Enter') { addCustomPrice(this.value); }">
+                </div>
             </div>
 
             <div id="cart-list"></div>
@@ -240,10 +244,13 @@
         <div><label>庫存</label><input type="number" id="new-s" style="width:50px;"></div>
         <div>
             <label>口味</label>
-            <select id="new-flavor" style="width:70px;">
+            <select id="new-flavor" style="width:90px;">
                 <option value="">-</option>
-                <option value="肉桂">肉桂</option>
-                <option value="原味">原味</option>
+                <option value="肉桂2">肉桂2</option>
+                <option value="原味2">原味2</option>
+                <option value="肉桂1+原味1">肉桂1+原味1</option>
+                <option value="原味1">原味1</option>
+                <option value="肉桂1">肉桂1</option>
             </select>
         </div>
         <div>
@@ -325,8 +332,11 @@
 
     const flavorOptionsHtml = `
         <option value="">-</option>
-        <option value="肉桂">肉桂</option>
-        <option value="原味">原味</option>
+        <option value="肉桂2">肉桂2</option>
+        <option value="原味2">原味2</option>
+        <option value="肉桂1+原味1">肉桂1+原味1</option>
+        <option value="原味1">原味1</option>
+        <option value="肉桂1">肉桂1</option>
     `;
 
     let barcodeString = "";
@@ -359,13 +369,18 @@
 
     function addCustomPrice(price) {
         if(!price || isNaN(price)) return;
+        const nameInput = document.getElementById('manual-name-input');
+        const customName = nameInput.value.trim() || "手動輸入商品";
+        
         const customItem = {
             id: 'CUSTOM',
-            n: `手動輸入商品 (${price})`,
+            n: `${customName} (${price})`,
             p: Number(price),
             c: 0
         };
         cart.push(customItem);
+        nameInput.value = '';
+        document.getElementById('manual-price-input').value = '';
         renderCart();
     }
 
@@ -520,7 +535,7 @@
                     <td><input type="number" value="${it.p}" onchange="editItem(${ci},${ii},'p',this.value)" style="width:45px;"></td>
                     <td><input type="number" value="${it.s}" onchange="editItem(${ci},${ii},'s',this.value)" style="width:45px;"></td>
                     <td>
-                        <select onchange="editItem(${ci},${ii},'flavor',this.value)" style="width:65px;">
+                        <select onchange="editItem(${ci},${ii},'flavor',this.value)" style="width:85px;">
                             ${flavorOptionsHtml.replace(`value="${it.flavor || ''}"`, `value="${it.flavor || ''}" selected`)}
                         </select>
                     </td>
@@ -721,7 +736,6 @@
         p.style.display = (p.style.display === 'flex' ? 'none' : 'flex');
     }
 
-    // 新增：當日快速查詢功能
     function searchToday() {
         const today = new Date();
         const y = today.getFullYear();
