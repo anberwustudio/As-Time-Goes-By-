@@ -135,7 +135,9 @@
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 30)">-$30</button>
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 50)">-$50</button>
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 100)">-$100</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.95)">95折</button>
                     <button class="q-btn" onclick="applyQuickDiscount('percent', 0.9)">9折</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.85)">85折</button>
                     <button class="q-btn" onclick="applyQuickDiscount('percent', 0.8)">8折</button>
                     <button class="q-btn" onclick="applyQuickDiscount('reset', 0)" style="background:#eee;">重設</button>
                 </div>
@@ -370,7 +372,6 @@
         };
         cart.push(customItem);
         nameInput.value = '';
-        // 注意：此處不自動清空口味，若需清空可加 flavorInput.value = '';
         document.getElementById('manual-price-input').value = '';
         renderCart();
     }
