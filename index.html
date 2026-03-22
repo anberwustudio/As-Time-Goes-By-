@@ -370,7 +370,7 @@
         };
         cart.push(customItem);
         nameInput.value = '';
-        flavorInput.value = '';
+        // 注意：此處不自動清空口味，若需清空可加 flavorInput.value = '';
         document.getElementById('manual-price-input').value = '';
         renderCart();
     }
@@ -557,6 +557,16 @@
             new Date(document.getElementById('manual-date').value).toLocaleDateString('zh-TW') : 
             new Date().toLocaleDateString('zh-TW');
         const taxId = document.getElementById('tax-id').value;
+        
+        // 獲取口味選項並合併到備註中
+        const flavorVal = document.getElementById('manual-flavor-input').value;
+        const noteVal = document.getElementById('discount-note').value;
+        let finalNote = flavorVal;
+        if(flavorVal && noteVal) {
+            finalNote = flavorVal + " / " + noteVal;
+        } else if(noteVal) {
+            finalNote = noteVal;
+        }
             
         const orderData = { 
             t: new Date().toLocaleTimeString('zh-TW', {hour12:false}), 
@@ -565,7 +575,7 @@
             profit: total - cart.reduce((a,b)=>a+(b.c||0), 0), 
             pay: currentPay, 
             items: [...cart], 
-            note: document.getElementById('discount-note').value,
+            note: finalNote,
             taxId: taxId
         };
 
@@ -584,6 +594,7 @@
         document.getElementById('discount').value = '';
         document.getElementById('cash-in').value = '';
         document.getElementById('tax-id').value = '';
+        document.getElementById('manual-flavor-input').value = ''; // 結帳後重設口味
         document.getElementById('barcode-status').innerText = '⌛ 條碼槍就緒';
         document.getElementById('barcode-status').style.background = "#eee";
         renderCart(); 
