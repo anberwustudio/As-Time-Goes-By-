@@ -136,10 +136,10 @@
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 30)">-$30</button>
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 50)">-$50</button>
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 100)">-$100</button>
-                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.95)">95折</button>
-                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.9)">9折</button>
-                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.85)">85折</button>
-                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.8)">8折</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.95, '95折')">95折</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.9, '9折')">9折</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.85, '85折')">85折</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('percent', 0.8, '8折')">8折</button>
                     <button class="q-btn" onclick="applyQuickDiscount('reset', 0)" style="background:#eee;">重設</button>
                 </div>
                 <div class="quick-btn-row" style="margin-top:4px;">
@@ -441,8 +441,7 @@
         const subtotal = cart.reduce((a, b) => a + b.p, 0);
         const discountVal = Number(document.getElementById('discount').value || 0);
         let rawTotal = subtotal - discountVal;
-        let roundedTotal = Math.floor(rawTotal / 10) * 10;
-        let finalTotal = Math.max(0, roundedTotal);
+        let finalTotal = Math.max(0, rawTotal);
         document.getElementById('final-total').innerText = finalTotal;
         calcChange();
     }
@@ -453,16 +452,25 @@
         document.getElementById('cash-change').innerText = p > t ? p - t : 0;
     }
 
-    function applyQuickDiscount(type, val) {
+    function applyQuickDiscount(type, val, label) {
         const subtotal = cart.reduce((a, b) => a + b.p, 0);
         const discInput = document.getElementById('discount');
+        const noteInput = document.getElementById('discount-note');
         if(type === 'minus') {
             discInput.value = (Number(discInput.value) || 0) + val;
         } else if(type === 'percent') {
             discInput.value = Math.round(subtotal * (1 - val));
+            // 處理備註：如果目前沒選原因則直接填，有選則累加
+            if (label) {
+                if (noteInput.value === "") {
+                    noteInput.value = label;
+                } else if (!noteInput.value.includes(label)) {
+                    noteInput.value = noteInput.value + " (" + label + ")";
+                }
+            }
         } else if(type === 'reset') {
             discInput.value = '';
-            document.getElementById('discount-note').value = '';
+            noteInput.value = '';
         }
         calc();
     }
@@ -596,6 +604,7 @@
         document.getElementById('cash-in').value = '';
         document.getElementById('tax-id').value = '';
         document.getElementById('manual-flavor-input').value = '';
+        document.getElementById('discount-note').value = '';
         document.getElementById('barcode-status').innerText = '⌛ 條碼槍就緒';
         document.getElementById('barcode-status').style.background = "#eee";
         renderCart(); 
