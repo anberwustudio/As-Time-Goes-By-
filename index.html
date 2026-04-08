@@ -85,6 +85,9 @@
         .edit-cat-btn { background: #3182ce; }
         .del-cat-btn { background: #ff4d4d; }
         .sort-cat-btn { background: #8c7b6c; }
+        
+        /* 拖曳樣式 */
+        .dragging { opacity: 0.5; background: #ebf8ff; }
     </style>
 </head>
 <body>
@@ -233,15 +236,18 @@
             <button onclick="toggleHistory()" style="padding:8px 15px;">✕ 關閉</button>
         </div>
     </div>
-    <div style="background:#fdf5f0; padding:15px; border-radius:10px; margin-bottom:15px; display:flex; gap:15px; align-items:center;">
-        <div>
+    <div style="background:#fdf5f0; padding:15px; border-radius:10px; margin-bottom:15px; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <label>單日：</label><input type="date" id="search-date" style="padding:8px;">
             <button onclick="searchHistory('day')" style="padding:8px 15px; background:var(--main-brown); color:white; border:none; cursor:pointer; touch-action:manipulation;">🔍 查詢</button>
-            <button onclick="searchToday()" style="padding:8px 15px; background:#4a5568; color:white; border:none; border-radius:4px; margin-left:5px; cursor:pointer; touch-action:manipulation;">📅 當日</button>
+            <button onclick="searchToday()" style="padding:8px 15px; background:#4a5568; color:white; border:none; border-radius:4px; cursor:pointer; touch-action:manipulation;">📅 當日</button>
         </div>
-        <div style="border-left: 2px solid #ddd; padding-left: 15px;">
-            <label>當月：</label><input type="month" id="search-month" style="padding:8px;">
-            <button onclick="searchHistory('month')" style="padding:8px 15px; background:var(--accent-brown); color:white; border:none; touch-action:manipulation;">📊 統計</button>
+        <div style="border-top: 1px solid #ddd; padding-top: 10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <label>區間：</label>
+            <input type="month" id="search-month-start" style="padding:8px;"> 
+            <span>至</span>
+            <input type="month" id="search-month-end" style="padding:8px;">
+            <button onclick="searchHistory('range')" style="padding:8px 15px; background:var(--accent-brown); color:white; border:none; touch-action:manipulation;">📊 區間統計</button>
         </div>
     </div>
     <div id="history-result-area" style="flex:1; overflow-y:auto; background:white; padding:15px; border-radius:10px; border:1px solid #eee;"></div>
@@ -401,7 +407,7 @@
         cart.push(customItem);
         nameInput.value = '';
         document.getElementById('manual-price-input').value = '';
-        flavorInput.value = ''; // 重置口味選單
+        flavorInput.value = ''; 
         renderCart();
     }
 
@@ -543,20 +549,21 @@
     }
 
     function renderAdminTable() {
+        const tbody = document.getElementById('admin-tbody');
         let html = '';
         inv.forEach((cat, ci) => {
-            html += `<tr id="ac${ci}" style="background:#eee;">
+            html += `<tr id="ac${ci}" style="background:#eee;" data-ci="${ci}" class="cat-header">
                 <td colspan="8" style="text-align:left; padding:10px;">
                     <b>📂 ${cat.cat}</b>
-                    <button class="sort-cat-btn" onclick="moveCategory(${ci}, -1)">↑ 上移</button>
-                    <button class="sort-cat-btn" onclick="moveCategory(${ci}, 1)">↓ 下移</button>
+                    <button class="sort-cat-btn" onclick="moveCategory(${ci}, -1)">↑</button>
+                    <button class="sort-cat-btn" onclick="moveCategory(${ci}, 1)">↓</button>
                     <button class="edit-cat-btn" onclick="editCategoryName(${ci})">✏️ 改名</button>
                     <button class="del-cat-btn" onclick="deleteCategory(${ci})">🗑️ 刪除</button>
                 </td>
             </tr>`;
             (cat.items || []).forEach((it, ii) => {
-                html += `<tr>
-                    <td><span onclick="move(${ci},${ii},-1)" style="cursor:pointer">↑</span> <span onclick="move(${ci},${ii},1)" style="cursor:pointer">↓</span></td>
+                html += `<tr draggable="true" data-ci="${ci}" data-ii="${ii}" class="draggable-item">
+                    <td style="cursor:move;">☰</td>
                     <td><input type="text" value="${it.id || ''}" onchange="editItem(${ci},${ii},'id',this.value)" style="width:120px; text-align:center;"></td>
                     <td style="text-align:left;"><input type="text" value="${it.n}" onchange="editItem(${ci},${ii},'n',this.value)" style="width:140px;"></td>
                     <td><input type="number" value="${it.c}" onchange="editItem(${ci},${ii},'c',this.value)" style="width:45px;"></td>
@@ -571,7 +578,52 @@
                 </tr>`;
             });
         });
-        document.getElementById('admin-tbody').innerHTML = html;
+        tbody.innerHTML = html;
+        initDragAndDrop();
+    }
+
+    // 拖曳功能實作
+    function initDragAndDrop() {
+        const items = document.querySelectorAll('.draggable-item');
+        let dragSrcEl = null;
+
+        items.forEach(item => {
+            item.addEventListener('dragstart', function(e) {
+                dragSrcEl = this;
+                e.dataTransfer.effectAllowed = 'move';
+                this.classList.add('dragging');
+            });
+
+            item.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            item.addEventListener('drop', function(e) {
+                e.stopPropagation();
+                if (dragSrcEl !== this) {
+                    const srcCi = parseInt(dragSrcEl.getAttribute('data-ci'));
+                    const srcIi = parseInt(dragSrcEl.getAttribute('data-ii'));
+                    const targetCi = parseInt(this.getAttribute('data-ci'));
+                    const targetIi = parseInt(this.getAttribute('data-ii'));
+
+                    // 僅限同分類內拖曳
+                    if (srcCi === targetCi) {
+                        const itemsList = inv[srcCi].items;
+                        const [movedItem] = itemsList.splice(srcIi, 1);
+                        itemsList.splice(targetIi, 0, movedItem);
+                        syncToDB();
+                    } else {
+                        alert("目前僅支援同分類內調整順序");
+                    }
+                }
+                return false;
+            });
+
+            item.addEventListener('dragend', function() {
+                this.classList.remove('dragging');
+            });
+        });
     }
 
     function addCart(id) {
@@ -780,17 +832,21 @@
     function searchHistory(type) {
         const resArea = document.getElementById('history-result-area');
         let filtered = [];
+        
         if(type === 'day') {
             const d = document.getElementById('search-date').value;
             if(!d) return alert("請選擇日期");
             const targetD = new Date(d).toLocaleDateString('zh-TW');
             filtered = orders.filter(o => o.d === targetD);
-        } else {
-            const m = document.getElementById('search-month').value;
-            if(!m) return alert("請選擇月份");
+        } else if(type === 'range') {
+            const startM = document.getElementById('search-month-start').value;
+            const endM = document.getElementById('search-month-end').value;
+            if(!startM || !endM) return alert("請選擇起始與結束月份");
+            
             filtered = orders.filter(o => {
                 const parts = o.d.split('/');
-                return `${parts[0]}-${parts[1].padStart(2,'0')}` === m;
+                const current = `${parts[0]}-${parts[1].padStart(2,'0')}`;
+                return current >= startM && current <= endM;
             });
         }
 
@@ -799,7 +855,7 @@
 
         resArea.innerHTML = `
             <div style="background:#eee; padding:10px; border-radius:8px; margin-bottom:10px; font-weight:bold;">
-                總銷售額: $${totalS} | 總毛利: $${totalP}
+                範圍總銷售額: $${totalS} | 範圍總毛利: $${totalP}
             </div>
             ${filtered.map(o => `
                 <div style="border-bottom:1px solid #ddd; padding:10px; display:flex; justify-content:space-between; align-items:center;">
