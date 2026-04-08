@@ -119,13 +119,26 @@
                            onkeydown="if(event.key === 'Enter') { addCustomPrice(this.value); }"
                            onblur="if(this.value !== '') { addCustomPrice(this.value); }">
                 </div>
-                <select id="manual-flavor-input" style="width: 100%; padding:10px; border:1px solid #d1c7bc; border-radius:8px; background:#fff; font-size:0.95em; -webkit-appearance: none;">
+                <select id="manual-flavor-input" style="width: 100%; padding:10px; border:1px solid #d1c7bc; border-radius:8px; background:#fff; font-size:0.95em; -webkit-appearance: none;" onchange="handleFlavorChange(this.value)">
                     <option value="">-- 選擇口味 (可不選) --</option>
-                    <option value="肉桂2">肉桂2</option>
-                    <option value="原味2">原味2</option>
-                    <option value="肉桂1+原味1">肉桂1+原味1</option>
-                    <option value="原味1">原味1</option>
-                    <option value="肉桂1">肉桂1</option>
+                    <option value="義式濃縮">義式濃縮</option>
+                    <option value="美式咖啡(熱)">美式咖啡(熱)</option>
+                    <option value="特選紅茶(熱)">特選紅茶(熱)</option>
+                    <option value="茉香綠茶(熱)">茉香綠茶(熱)</option>
+                    <option value="美式咖啡(冰)+10">美式咖啡(冰)+10</option>
+                    <option value="濾掛咖啡+10">濾掛咖啡+10</option>
+                    <option value="特選紅茶(冰)+10">特選紅茶(冰)+10</option>
+                    <option value="柚子茶(熱)+10">柚子茶(熱)+10</option>
+                    <option value="柚香紅茶(熱)+20">柚香紅茶(熱)+20</option>
+                    <option value="柚子茶(冰)+20">柚子茶(冰)+20</option>
+                    <option value="拿鐵(熱)+30">拿鐵(熱)+30</option>
+                    <option value="柚香紅茶(冰)+30">柚香紅茶(冰)+30</option>
+                    <option value="鮮奶茶(熱)+30">鮮奶茶(熱)+30</option>
+                    <option value="水蜜桃蘋果茶+30">水蜜桃蘋果茶+30</option>
+                    <option value="拿鐵(冰)+40">拿鐵(冰)+40</option>
+                    <option value="鮮奶茶(冰)+40">鮮奶茶(冰)+40</option>
+                    <option value="太妃糖拿鐵(熱)+50">太妃糖拿鐵(熱)+50</option>
+                    <option value="太妃糖拿鐵(冰)+60">太妃糖拿鐵(冰)+60</option>
                 </select>
             </div>
 
@@ -148,6 +161,9 @@
                 
                 <select id="discount-note" class="small-note" style="background: white; -webkit-appearance: none;">
                     <option value="">-- 選擇折扣原因 --</option>
+                    <option value="品牌－課程/餐飲">🏫 品牌－課程/餐飲</option>
+                    <option value="品牌－空間">🏠 品牌－空間</option>
+                    <option value="品牌寄售折扣">🏷️ 品牌寄售折扣</option>
                     <option value="追蹤">📱 追蹤</option>
                     <option value="朋友">🤝 朋友</option>
                     <option value="2件以上">✌️ 2件以上</option>
@@ -358,6 +374,17 @@
         }
     }
 
+    function handleFlavorChange(val) {
+        if(!val) return;
+        const priceInput = document.getElementById('manual-price-input');
+        const match = val.match(/\+(\d+)$/);
+        if(match) {
+            const addAmt = Number(match[1]);
+            const currentAmt = Number(priceInput.value) || 0;
+            priceInput.value = currentAmt + addAmt;
+        }
+    }
+
     function addCustomPrice(price) {
         if(!price || isNaN(price) || Number(price) === 0) return;
         const nameInput = document.getElementById('manual-name-input');
@@ -374,6 +401,7 @@
         cart.push(customItem);
         nameInput.value = '';
         document.getElementById('manual-price-input').value = '';
+        flavorInput.value = ''; // 重置口味選單
         renderCart();
     }
 
@@ -460,7 +488,6 @@
             discInput.value = (Number(discInput.value) || 0) + val;
         } else if(type === 'percent') {
             discInput.value = Math.round(subtotal * (1 - val));
-            // 處理備註：如果目前沒選原因則直接填，有選則累加
             if (label) {
                 if (noteInput.value === "") {
                     noteInput.value = label;
