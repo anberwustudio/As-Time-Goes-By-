@@ -86,7 +86,6 @@
         .del-cat-btn { background: #ff4d4d; }
         .sort-cat-btn { background: #8c7b6c; }
         
-        /* 拖曳樣式 */
         .dragging { opacity: 0.5; background: #ebf8ff; }
     </style>
 </head>
@@ -149,9 +148,9 @@
             <div style="margin-top:10px;">
                 <input type="number" id="discount" class="big-input" placeholder="折扣金額" oninput="calc()">
                 <div class="quick-btn-row">
-                    <button class="q-btn" onclick="applyQuickDiscount('minus', 30)">-$30</button>
-                    <button class="q-btn" onclick="applyQuickDiscount('minus', 50)">-$50</button>
-                    <button class="q-btn" onclick="applyQuickDiscount('minus', 100)">-$100</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('minus', 20, '-$20')">-$20</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('minus', 50, '-$50')">-$50</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('minus', 100, '-$100')">-$100</button>
                     <button class="q-btn" onclick="applyQuickDiscount('percent', 0.95, '95折')">95折</button>
                     <button class="q-btn" onclick="applyQuickDiscount('percent', 0.9, '9折')">9折</button>
                     <button class="q-btn" onclick="applyQuickDiscount('percent', 0.85, '85折')">85折</button>
@@ -159,11 +158,12 @@
                     <button class="q-btn" onclick="applyQuickDiscount('reset', 0)" style="background:#eee;">重設</button>
                 </div>
                 <div class="quick-btn-row" style="margin-top:4px;">
-                    <button class="q-btn" onclick="applyQuickDiscount('minus', 50); document.getElementById('discount-note').value='購物金券';" style="background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">🎟️ 購物金券 (-$50)</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('minus', 50, '購物金券'); document.getElementById('discount-note').value='購物金券';" style="background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">🎟️ 購物金券 (-$50)</button>
                 </div>
                 
                 <select id="discount-note" class="small-note" style="background: white; -webkit-appearance: none;">
                     <option value="">-- 選擇折扣原因 --</option>
+                    <option value="抽抽樂">🎲 抽抽樂</option>
                     <option value="品牌－課程/餐飲">🏫 品牌－課程/餐飲</option>
                     <option value="品牌－空間">🏠 品牌－空間</option>
                     <option value="品牌寄售折扣">🏷️ 品牌寄售折扣</option>
@@ -494,16 +494,19 @@
             discInput.value = (Number(discInput.value) || 0) + val;
         } else if(type === 'percent') {
             discInput.value = Math.round(subtotal * (1 - val));
-            if (label) {
-                if (noteInput.value === "") {
-                    noteInput.value = label;
-                } else if (!noteInput.value.includes(label)) {
-                    noteInput.value = noteInput.value + " (" + label + ")";
-                }
-            }
         } else if(type === 'reset') {
             discInput.value = '';
             noteInput.value = '';
+            calc();
+            return;
+        }
+
+        if (label) {
+            if (noteInput.value === "") {
+                noteInput.value = label;
+            } else if (!noteInput.value.includes(label)) {
+                noteInput.value = noteInput.value + " (" + label + ")";
+            }
         }
         calc();
     }
@@ -582,7 +585,6 @@
         initDragAndDrop();
     }
 
-    // 拖曳功能實作
     function initDragAndDrop() {
         const items = document.querySelectorAll('.draggable-item');
         let dragSrcEl = null;
@@ -607,7 +609,6 @@
                     const targetCi = parseInt(this.getAttribute('data-ci'));
                     const targetIi = parseInt(this.getAttribute('data-ii'));
 
-                    // 僅限同分類內拖曳
                     if (srcCi === targetCi) {
                         const itemsList = inv[srcCi].items;
                         const [movedItem] = itemsList.splice(srcIi, 1);
