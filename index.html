@@ -853,6 +853,16 @@
             });
         }
 
+        // 新增：按照日期與時間進行正向排序 (由舊到新)
+        filtered.sort((a, b) => {
+            // 先比較日期 (格式 YYYY/M/D)，補零以確保正確對比字串
+            const dateA = a.d.split('/').map(v => v.padStart(2, '0')).join('/');
+            const dateB = b.d.split('/').map(v => v.padStart(2, '0')).join('/');
+            if (dateA !== dateB) return dateA.localeCompare(dateB);
+            // 日期相同則比較時間 (格式 HH:MM:SS)
+            return a.t.localeCompare(b.t);
+        });
+
         let totalS = filtered.reduce((a,b)=>a+b.total, 0);
         let totalP = filtered.reduce((a,b)=>a+b.profit, 0);
 
