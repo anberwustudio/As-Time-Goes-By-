@@ -147,7 +147,7 @@
 
             <div id="cart-list"></div>
             <div style="margin-top:10px;">
-                <input type="number" id="discount" class="big-input" placeholder="折扣金額" oninput="calc()">
+                <input type="number" id="discount" class="big-input" placeholder="折扣金額" oninput="handleManualDiscountInput(this.value)">
                 <div class="quick-btn-row">
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 20, '-$20')">-$20</button>
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 50, '-$50')">-$50</button>
@@ -159,7 +159,7 @@
                     <button class="q-btn" onclick="applyQuickDiscount('reset', 0)" style="background:#eee;">重設</button>
                 </div>
                 <div class="quick-btn-row" style="margin-top:4px;">
-                    <button class="q-btn" onclick="applyQuickDiscount('minus', 50, '購物金券'); document.getElementById('discount-note').value='購物金券';" style="background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">🎟️ 購物金券 (-$50)</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('minus', 50, '購物金券');" style="background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">🎟️ 購物金券 (-$50)</button>
                 </div>
                 
                 <select id="discount-note" class="small-note" style="background: white; -webkit-appearance: none;">
@@ -393,8 +393,9 @@
         }
     }
 
+    // 修改：放寬判斷，允許輸入 0 元
     function addCustomPrice(price) {
-        if(!price || isNaN(price) || Number(price) === 0) return;
+        if(price === '' || isNaN(price)) return;
         const nameInput = document.getElementById('manual-name-input');
         const flavorInput = document.getElementById('manual-flavor-input');
         const customName = nameInput.value.trim() || "手動輸入商品";
@@ -488,29 +489,46 @@
         document.getElementById('cash-change').innerText = p > t ? p - t : 0;
     }
 
+    // 新增：處理手動輸入折扣金額時的紀錄
+    function handleManualDiscountInput(val) {
+        const noteInput = document.getElementById('discount-note');
+        if (val > 0) {
+            updateDiscountNote(`手動-$${val}`);
+        }
+        calc();
+    }
+
     function applyQuickDiscount(type, val, label) {
         const subtotal = cart.reduce((a, b) => a + b.p, 0);
         const discInput = document.getElementById('discount');
         const noteInput = document.getElementById('discount-note');
+        
+        let currentDisc = Number(discInput.value) || 0;
+
         if(type === 'minus') {
-            discInput.value = (Number(discInput.value) || 0) + val;
+            discInput.value = currentDisc + val;
+            updateDiscountNote(`-$${val}`);
         } else if(type === 'percent') {
-            discInput.value = Math.round(subtotal * (1 - val));
+            const calculated = Math.round(subtotal * (1 - val));
+            discInput.value = calculated;
+            updateDiscountNote(label);
         } else if(type === 'reset') {
             discInput.value = '';
             noteInput.value = '';
             calc();
             return;
         }
-
-        if (label) {
-            if (noteInput.value === "") {
-                noteInput.value = label;
-            } else if (!noteInput.value.includes(label)) {
-                noteInput.value = noteInput.value + " (" + label + ")";
-            }
-        }
         calc();
+    }
+
+    // 新增：輔助函數，用來累加備註
+    function updateDiscountNote(text) {
+        const noteInput = document.getElementById('discount-note');
+        if (noteInput.value === "") {
+            noteInput.value = text;
+        } else if (!noteInput.value.includes(text)) {
+            noteInput.value = noteInput.value + " / " + text;
+        }
     }
 
     function applyQuickCash(val) {
@@ -853,13 +871,10 @@
             });
         }
 
-        // 新增：按照日期與時間進行正向排序 (由舊到新)
         filtered.sort((a, b) => {
-            // 先比較日期 (格式 YYYY/M/D)，補零以確保正確對比字串
             const dateA = a.d.split('/').map(v => v.padStart(2, '0')).join('/');
             const dateB = b.d.split('/').map(v => v.padStart(2, '0')).join('/');
             if (dateA !== dateB) return dateA.localeCompare(dateB);
-            // 日期相同則比較時間 (格式 HH:MM:SS)
             return a.t.localeCompare(b.t);
         });
 
