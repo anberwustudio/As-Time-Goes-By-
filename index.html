@@ -159,7 +159,7 @@
                     <button class="q-btn" onclick="applyQuickDiscount('reset', 0)" style="background:#eee;">重設</button>
                 </div>
                 <div class="quick-btn-row" style="margin-top:4px;">
-                    <button class="q-btn" onclick="applyQuickDiscount('minus', 50, '購物金券');" style="background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">🎟️ 購物金券 (-$50)</button>
+                    <button class="q-btn" onclick="applyQuickDiscount('minus', 50, '購物金券-$50');" style="background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">🎟️ 購物金券 (-$50)</button>
                 </div>
                 
                 <select id="discount-note" class="small-note" style="background: white; -webkit-appearance: none;">
@@ -393,7 +393,6 @@
         }
     }
 
-    // 修改：放寬判斷，允許輸入 0 元
     function addCustomPrice(price) {
         if(price === '' || isNaN(price)) return;
         const nameInput = document.getElementById('manual-name-input');
@@ -489,38 +488,51 @@
         document.getElementById('cash-change').innerText = p > t ? p - t : 0;
     }
 
-    // 修改：處理手動輸入折扣金額時的紀錄，改為按下 Enter 觸發
+    // 修改：手動輸入折扣金額後按 Enter 新增折扣項目到清單
     function handleManualDiscountEnter(val) {
         if (val > 0) {
+            const amt = Number(val);
+            cart.push({ id: 'DISC', n: `折扣_手動抵扣`, p: -amt, c: 0 });
             updateDiscountNote(`手動-$${val}`);
+            document.getElementById('discount').value = ''; 
         }
-        calc();
+        renderCart();
     }
 
+    // 修改：快速折扣按鈕點擊後，新增折扣項目到清單
     function applyQuickDiscount(type, val, label) {
-        const subtotal = cart.reduce((a, b) => a + b.p, 0);
-        const discInput = document.getElementById('discount');
+        // 計算不包含現有折扣項目的小計，避免重疊計算
+        const subtotalBase = cart.filter(it => it.id !== 'DISC').reduce((a, b) => a + b.p, 0);
         const noteInput = document.getElementById('discount-note');
-        
-        let currentDisc = Number(discInput.value) || 0;
+        const discInput = document.getElementById('discount');
 
-        if(type === 'minus') {
-            discInput.value = currentDisc + val;
-            updateDiscountNote(`-$${val}`);
-        } else if(type === 'percent') {
-            const calculated = Math.round(subtotal * (1 - val));
-            discInput.value = calculated;
-            updateDiscountNote(label);
-        } else if(type === 'reset') {
+        if(type === 'reset') {
+            // 清除清單中所有的折扣項目
+            cart = cart.filter(it => it.id !== 'DISC');
             discInput.value = '';
             noteInput.value = '';
-            calc();
+            renderCart();
             return;
         }
-        calc();
+
+        let discAmt = 0;
+        let discName = "折扣_" + label;
+
+        if(type === 'minus') {
+            discAmt = val;
+        } else if(type === 'percent') {
+            discAmt = Math.round(subtotalBase * (1 - val));
+            const afterDisc = subtotalBase - discAmt;
+            discName += " " + afterDisc; // 例如：折扣_8折 800
+        }
+
+        if (discAmt !== 0) {
+            cart.push({ id: 'DISC', n: discName, p: -discAmt, c: 0 });
+            updateDiscountNote(label);
+            renderCart();
+        }
     }
 
-    // 新增：輔助函數，用來累加備註（即圖片中的紀錄欄位）
     function updateDiscountNote(text) {
         const noteInput = document.getElementById('discount-note');
         if (noteInput.value === "") {
@@ -688,7 +700,7 @@
         };
 
         cart.forEach(item => { 
-            if(item.id !== 'CUSTOM') {
+            if(item.id !== 'CUSTOM' && item.id !== 'DISC') {
                 inv.forEach(c => (c.items || []).forEach(i => { if(i.id === item.id) i.s--; })); 
             }
         });
@@ -905,7 +917,7 @@
             const order = orders.find(o => o.firebaseKey === key);
             if(order && order.pay !== '支出') {
                 order.items.forEach(item => {
-                    if(item.id !== 'CUSTOM') {
+                    if(item.id !== 'CUSTOM' && item.id !== 'DISC') {
                         inv.forEach(c => (c.items || []).forEach(i => { if(i.id === item.id) i.s++; }));
                     }
                 });
