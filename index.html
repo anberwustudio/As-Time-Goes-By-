@@ -147,7 +147,7 @@
 
             <div id="cart-list"></div>
             <div style="margin-top:10px;">
-                <input type="number" id="discount" class="big-input" placeholder="折扣金額" oninput="handleManualDiscountInput(this.value)">
+                <input type="number" id="discount" class="big-input" placeholder="折扣金額" onkeydown="if(event.key === 'Enter') { handleManualDiscountEnter(this.value); }">
                 <div class="quick-btn-row">
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 20, '-$20')">-$20</button>
                     <button class="q-btn" onclick="applyQuickDiscount('minus', 50, '-$50')">-$50</button>
@@ -489,9 +489,8 @@
         document.getElementById('cash-change').innerText = p > t ? p - t : 0;
     }
 
-    // 新增：處理手動輸入折扣金額時的紀錄
-    function handleManualDiscountInput(val) {
-        const noteInput = document.getElementById('discount-note');
+    // 修改：處理手動輸入折扣金額時的紀錄，改為按下 Enter 觸發
+    function handleManualDiscountEnter(val) {
         if (val > 0) {
             updateDiscountNote(`手動-$${val}`);
         }
@@ -521,7 +520,7 @@
         calc();
     }
 
-    // 新增：輔助函數，用來累加備註
+    // 新增：輔助函數，用來累加備註（即圖片中的紀錄欄位）
     function updateDiscountNote(text) {
         const noteInput = document.getElementById('discount-note');
         if (noteInput.value === "") {
