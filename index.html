@@ -130,7 +130,6 @@
                     <option value="美式咖啡(冰)+10">美式咖啡(冰)+10</option>
                     <option value="濾掛咖啡+10">濾掛咖啡+10</option>
                     <option value="特選紅茶(冰)+10">特選紅茶(冰)+10</option>
-                    <option value="茉香綠茶(冰)+10">茉香綠茶(冰)+10</option>
                     <option value="柚子茶(熱)+10">柚子茶(熱)+10</option>
                     <option value="柚香紅茶(熱)+20">柚香紅茶(熱)+20</option>
                     <option value="柚子茶(冰)+20">柚子茶(冰)+20</option>
@@ -524,8 +523,8 @@
             discAmt = val;
         } else if(type === 'percent') {
             discAmt = Math.round(subtotalBase * (1 - val));
-            const afterDisc = subtotalBase - discAmt;
-            discName += " " + afterDisc; // 例如：折扣_8折 800
+            // 修改處：將原本顯示「折完後的應付金額」改為顯示「折的金額」
+            discName += " -$" + discAmt; 
         }
 
         if (discAmt !== 0) {
