@@ -185,10 +185,11 @@
             </div>
             <div class="total-display">$<span id="final-total">0</span></div>
             
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-bottom:10px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:5px; margin-bottom:10px;">
                 <button class="pay-btn active" id="btn-cash" onclick="setPay('現金')">💵 現金</button>
                 <button class="pay-btn" id="btn-card" onclick="setPay('信用卡')">💳 信用卡</button>
                 <button class="pay-btn" id="btn-line" onclick="setPay('LINE Pay')">🟢 LINEPay</button>
+                <button class="pay-btn" id="btn-atm" onclick="setPay('ATM轉帳')">🪙 ATM轉帳</button>
             </div>
 
             <input type="text" id="tax-id" class="small-note" placeholder="載具 / 統編 (可不填)" style="text-align: center; margin-bottom: 8px; border: 1px solid #8c7b6c;">
@@ -236,7 +237,6 @@
         <h2 style="margin:0;">📜 歷史紀錄管理</h2>
         <div style="display:flex; gap:10px;">
             <button onclick="exportHistoryToExcel()" style="padding:8px 15px; background:#217346; color:white; border:none; border-radius:5px; cursor:pointer; touch-action:manipulation;">📥 匯出 Excel</button>
-            <button onclick="clearAllHistory()" style="padding:8px 15px; background:#d9534f; color:white; border:none; border-radius:5px; cursor:pointer; touch-action:manipulation;">🧹 清空所有紀錄</button>
             <button onclick="toggleHistory()" style="padding:8px 15px;">✕ 關閉</button>
         </div>
     </div>
@@ -307,8 +307,8 @@
         <div style="background:#f9f9f9; padding:15px; border-radius:10px; overflow-y:auto; display:flex; flex-direction:column;">
             <h3>📊 銷售排名</h3>
             <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; background:#eee; padding:10px; border-radius:8px;">
-                <select id="stat-year" style="padding:5px; flex:1;"></select>
-                <select id="stat-month" style="padding:5px; flex:1;"></select>
+                <select id="stat-year" style="padding:5px; flex:1"></select>
+                <select id="stat-month" style="padding:5px; flex:1"></select>
                 <button onclick="renderStatTable()" style="flex:1; background:var(--main-brown); color:white; border:none; border-radius:5px; cursor:pointer; touch-action:manipulation;">篩選</button>
                 <button onclick="renderStatTable(true)" style="width:100%; margin-top:5px; padding:5px; background:#888; color:white; border:none; border-radius:5px; cursor:pointer; touch-action:manipulation;">不分銷售時間 (全部統計)</button>
             </div>
@@ -490,7 +490,6 @@
         document.getElementById('cash-change').innerText = p > t ? p - t : 0;
     }
 
-    // 修改：手動輸入折扣金額後按 Enter 新增折扣項目到清單
     function handleManualDiscountEnter(val) {
         if (val > 0) {
             const amt = Number(val);
@@ -501,15 +500,12 @@
         renderCart();
     }
 
-    // 修改：快速折扣按鈕點擊後，新增折扣項目到清單
     function applyQuickDiscount(type, val, label) {
-        // 計算不包含現有折扣項目的小計，避免重疊計算
         const subtotalBase = cart.filter(it => it.id !== 'DISC').reduce((a, b) => a + b.p, 0);
         const noteInput = document.getElementById('discount-note');
         const discInput = document.getElementById('discount');
 
         if(type === 'reset') {
-            // 清除清單中所有的折扣項目
             cart = cart.filter(it => it.id !== 'DISC');
             discInput.value = '';
             noteInput.value = '';
@@ -524,8 +520,8 @@
             discAmt = val;
         } else if(type === 'percent') {
             discAmt = Math.round(subtotalBase * (1 - val));
-            // 修改處：將原本顯示「折完後的應付金額」改為顯示「折的金額」
-            discName += " -$" + discAmt; 
+            const afterDisc = subtotalBase - discAmt;
+            discName += " " + afterDisc;
         }
 
         if (discAmt !== 0) {
@@ -557,6 +553,7 @@
         if(method === '現金') document.getElementById('btn-cash').classList.add('active');
         if(method === '信用卡') document.getElementById('btn-card').classList.add('active');
         if(method === 'LINE Pay') document.getElementById('btn-line').classList.add('active');
+        if(method === 'ATM轉帳') document.getElementById('btn-atm').classList.add('active');
     }
 
     function renderStatTable(ignoreTime = false) {
