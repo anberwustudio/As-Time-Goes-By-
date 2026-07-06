@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>As Time Goes By 時光造所 -POS</title>
+    <title>As Time Goes By 時光造所 POS 系統</title>
     
     <link rel="icon" href="https://drive.google.com/file/d/17MDFfYz25QwjZRWWehnSPOrYPZVQJt1B/view?usp=sharing" type="image/x-icon">
     <link rel="shortcut icon" href="https://drive.google.com/file/d/17MDFfYz25QwjZRWWehnSPOrYPZVQJt1B/view?usp=sharing" type="image/png">
@@ -93,12 +93,12 @@
 
 <header>
     <img src="您的LOGO圖片網址" alt="LOGO"> 
-    As Time Goes By 時光造所 -POS
+    As Time Goes By 時光造所 POS 系統
 </header>
 
 <div class="nav-bar">
     <div id="navbar" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-    <div id="barcode-status" style="padding: 5px 10px; background: #eee; border-radius: 10px; font-size: 0.8em; margin-left:auto;">⌛ 條碼槍就緒</div>
+    <div id="barcode-status" style="padding: 5px 10px; background: #eee; border-radius: 10px; font-size: 0.8em; margin-left:auto;">⌛ 條碼 / 座位系統就緒</div>
     <button class="sync-btn" onclick="syncOfflineData()">🔄 同步</button>
 </div>
 
@@ -106,7 +106,7 @@
     <div class="item-area" id="item-area">同步中...</div>
     <div class="checkout-area">
         <div class="card">
-            <strong>🛒 當前清單 (條碼掃描中...)</strong>
+            <strong>🛒 當前清單 (條碼 / 座位系統接收中...)</strong>
             
             <div style="margin: 8px 0; display: flex; flex-direction: column; gap: 5px;">
                 <input type="text" id="manual-barcode-input" placeholder="掃描或手動輸入代碼..." 
@@ -443,6 +443,7 @@
         mSel.value = new Date().getMonth() + 1;
     }
     loadData();
+    initSeatToPOSReceiver();
 
     function syncToDB() {
         initUI();
@@ -661,6 +662,74 @@
         let target = findProductById(id);
         if(target) { cart.push({...target}); renderCart(); }
     }
+
+    function normalizeSeatPOSName(v) {
+        return String(v || '').replace(/\s+/g,'').replace(/（/g,'(').replace(/）/g,')');
+    }
+
+    function findProductByNamePrice(name, price) {
+        let target = null;
+        const n = normalizeSeatPOSName(name);
+        inv.forEach(c => (c.items || []).forEach(i => {
+            if(target) return;
+            const iname = normalizeSeatPOSName(i.n);
+            if(Number(i.p) === Number(price) && (iname === n || n.includes(iname) || iname.includes(n))) {
+                target = i;
+            }
+        }));
+        return target;
+    }
+
+    function addSeatImportedItem(item) {
+        let found = null;
+        if(item.productId) found = findProductById(item.productId);
+        if(!found && item.type !== 'custom') found = findProductByNamePrice(item.name, item.price);
+        if(found) {
+            cart.push({...found});
+        } else {
+            cart.push({
+                id: item.productId || 'CUSTOM',
+                n: item.name || '座位系統匯入',
+                p: Number(item.price || 0),
+                c: 0
+            });
+        }
+    }
+
+    function importSeatPayloadToCart(payload, retry = 0) {
+        if(!payload || !payload.id || !payload.items) return;
+        if((!inv || !inv.length) && retry < 10) {
+            setTimeout(() => importSeatPayloadToCart(payload, retry + 1), 300);
+            return;
+        }
+
+        const lastId = localStorage.getItem('lastSeatToPOSImportId');
+        if(lastId === payload.id) return;
+        localStorage.setItem('lastSeatToPOSImportId', payload.id);
+
+        payload.items.forEach(addSeatImportedItem);
+        renderCart();
+
+        const statusEl = document.getElementById('barcode-status');
+        if(statusEl) {
+            statusEl.innerText = `✅ 已匯入座位：${payload.orderLabel || (payload.seats || []).join('、')} $${payload.total || 0}`;
+            statusEl.style.background = "#dcfce7";
+        }
+
+        try {
+            if(db) db.ref('seatToPosImport/current').remove();
+        } catch(e) {}
+    }
+
+    function initSeatToPOSReceiver() {
+        if(!db) return;
+        db.ref('seatToPosImport/current').on('value', snap => {
+            const payload = snap.val();
+            if(!payload || !payload.id) return;
+            importSeatPayloadToCart(payload);
+        });
+    }
+
     function renderCart() {
         document.getElementById('cart-list').innerHTML = cart.map((it, i) => {
             const displayName = it.n;
@@ -715,7 +784,7 @@
         document.getElementById('tax-id').value = '';
         document.getElementById('manual-flavor-input').value = '';
         document.getElementById('discount-note').value = '';
-        document.getElementById('barcode-status').innerText = '⌛ 條碼槍就緒';
+        document.getElementById('barcode-status').innerText = '⌛ 條碼 / 座位系統就緒';
         document.getElementById('barcode-status').style.background = "#eee";
         renderCart(); 
     }
