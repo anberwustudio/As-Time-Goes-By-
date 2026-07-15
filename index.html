@@ -343,7 +343,7 @@
         <div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:10px;">
             <h3 style="margin-top:0;">🧾 各分類銷售品項與金額</h3>
             <table style="font-size:0.95em;">
-                <thead><tr><th>分類</th><th>銷售品項</th><th>金額</th></tr></thead>
+                <thead><tr><th>分類</th><th>銷售品項</th><th>數量</th><th>金額</th></tr></thead>
                 <tbody id="category-item-sales-tbody"></tbody>
             </table>
         </div>
@@ -1105,8 +1105,9 @@
                 if(categoryTotals[category] === undefined) categoryTotals[category] = 0;
                 categoryTotals[category] += Number(item.p || 0);
                 if(!categoryItemTotals[category]) categoryItemTotals[category] = {};
-                if(categoryItemTotals[category][itemName] === undefined) categoryItemTotals[category][itemName] = 0;
-                categoryItemTotals[category][itemName] += Number(item.p || 0);
+                if(!categoryItemTotals[category][itemName]) categoryItemTotals[category][itemName] = { qty: 0, amount: 0 };
+                categoryItemTotals[category][itemName].qty += 1;
+                categoryItemTotals[category][itemName].amount += Number(item.p || 0);
             });
         });
 
@@ -1126,25 +1127,27 @@
         const categoryItemRows = [];
         categoryOrder.forEach(category => {
             const itemEntries = Object.entries(categoryItemTotals[category] || {})
-                .sort((a, b) => b[1] - a[1]);
+                .sort((a, b) => b[1].amount - a[1].amount);
 
             if(!itemEntries.length) {
                 categoryItemRows.push(`
                     <tr>
                         <td style="text-align:left;">${category}</td>
                         <td style="text-align:left; color:#999;">本區間無銷售品項</td>
+                        <td>0</td>
                         <td>$0</td>
                     </tr>
                 `);
                 return;
             }
 
-            itemEntries.forEach(([itemName, amount], index) => {
+            itemEntries.forEach(([itemName, itemStats], index) => {
                 categoryItemRows.push(`
                     <tr>
                         ${index === 0 ? `<td rowspan="${itemEntries.length}" style="text-align:left; vertical-align:top; font-weight:bold;">${category}</td>` : ''}
                         <td style="text-align:left;">${itemName}</td>
-                        <td>$${amount}</td>
+                        <td>${itemStats.qty}</td>
+                        <td>$${itemStats.amount}</td>
                     </tr>
                 `);
             });
