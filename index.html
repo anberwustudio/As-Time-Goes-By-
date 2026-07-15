@@ -341,6 +341,14 @@
         </div>
 
         <div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:10px;">
+            <h3 style="margin-top:0;">🧾 各分類銷售品項與金額</h3>
+            <table style="font-size:0.95em;">
+                <thead><tr><th>分類</th><th>銷售品項</th><th>金額</th></tr></thead>
+                <tbody id="category-item-sales-tbody"></tbody>
+            </table>
+        </div>
+
+        <div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:10px;">
             <h3 style="margin-top:0;">👥 每月來客數 / 平均客單價</h3>
             <table style="font-size:0.95em;">
                 <thead><tr><th>月份</th><th>銷售額</th><th>來客數（自行輸入）</th><th>平均客單價</th></tr></thead>
@@ -1070,8 +1078,9 @@
     function renderSalesCategoryStats(showAlert = true) {
         const summaryArea = document.getElementById('sales-range-summary');
         const categoryTbody = document.getElementById('category-sales-tbody');
+        const categoryItemTbody = document.getElementById('category-item-sales-tbody');
         const monthlyTbody = document.getElementById('monthly-customer-tbody');
-        if(!summaryArea || !categoryTbody || !monthlyTbody) return;
+        if(!summaryArea || !categoryTbody || !categoryItemTbody || !monthlyTbody) return;
 
         const { startKey, endKey } = getSalesRangeKeys();
         if(!startKey || !endKey) return;
@@ -1086,13 +1095,18 @@
         });
 
         const categoryTotals = {};
+        const categoryItemTotals = {};
         inv.forEach(c => { categoryTotals[c.cat] = 0; });
         filteredOrders.forEach(o => {
             (o.items || []).forEach(item => {
                 if(item.id === 'EXP') return;
                 const category = getSalesCategory(item);
+                const itemName = formatProductDisplayName(item);
                 if(categoryTotals[category] === undefined) categoryTotals[category] = 0;
                 categoryTotals[category] += Number(item.p || 0);
+                if(!categoryItemTotals[category]) categoryItemTotals[category] = {};
+                if(categoryItemTotals[category][itemName] === undefined) categoryItemTotals[category][itemName] = 0;
+                categoryItemTotals[category][itemName] += Number(item.p || 0);
             });
         });
 
@@ -1108,6 +1122,34 @@
                 <td>$${categoryTotals[category] || 0}</td>
             </tr>
         `).join('');
+
+        const categoryItemRows = [];
+        categoryOrder.forEach(category => {
+            const itemEntries = Object.entries(categoryItemTotals[category] || {})
+                .sort((a, b) => b[1] - a[1]);
+
+            if(!itemEntries.length) {
+                categoryItemRows.push(`
+                    <tr>
+                        <td style="text-align:left;">${category}</td>
+                        <td style="text-align:left; color:#999;">本區間無銷售品項</td>
+                        <td>$0</td>
+                    </tr>
+                `);
+                return;
+            }
+
+            itemEntries.forEach(([itemName, amount], index) => {
+                categoryItemRows.push(`
+                    <tr>
+                        ${index === 0 ? `<td rowspan="${itemEntries.length}" style="text-align:left; vertical-align:top; font-weight:bold;">${category}</td>` : ''}
+                        <td style="text-align:left;">${itemName}</td>
+                        <td>$${amount}</td>
+                    </tr>
+                `);
+            });
+        });
+        categoryItemTbody.innerHTML = categoryItemRows.join('');
 
         const monthKeys = getMonthKeysBetween(startKey, endKey);
         const monthlySales = {};
