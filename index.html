@@ -51,7 +51,7 @@
         .cat-title { background: #fdf5f0; padding: 8px 15px; border-radius: 20px; margin: 15px 0 8px; font-weight: bold; border-left: 8px solid var(--main-brown); font-size: 1.2em; }
         .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 10px; }
         .p-btn { background: white; border: 1px solid #f0e6dd; border-radius: 12px; padding: 10px 5px; text-align: center; cursor: pointer; box-shadow: 2px 2px 0 #e8e0d9; min-height: 90px; display: flex; flex-direction: column; justify-content: center; touch-action: manipulation; }
-        .p-name { font-size: 0.85em; font-weight: bold; margin-bottom: 5px; height: 2.8em; overflow: hidden; line-height: 1.4; }
+        .p-name { font-size: 0.85em; font-weight: bold; margin-bottom: 5px; min-height: 2.8em; line-height: 1.4; }
         .p-price { color: #c2966d; font-size: 1.2em; font-weight: bold; }
         .p-stock { font-size: 0.8em; color: #999; }
         
@@ -72,9 +72,8 @@
         #order-log-container { min-height: 250px; flex: 1; display: flex; flex-direction: column; }
         #order-log { flex: 1; overflow-y: auto; }
 
-        #admin-panel, #history-panel { position: fixed; inset: 10px; background: white; z-index: 1000; border-radius: 20px; display: none; flex-direction: column; padding: 15px; border: 3px solid var(--main-brown); box-shadow: 0 0 50px rgba(0,0,0,0.3); }
+        #admin-panel, #history-panel, #sales-stats-panel { position: fixed; inset: 10px; background: white; z-index: 1000; border-radius: 20px; display: none; flex-direction: column; padding: 15px; border: 3px solid var(--main-brown); box-shadow: 0 0 50px rgba(0,0,0,0.3); }
         .admin-layout { display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; }
-        @media (min-width: 768px) { .admin-layout { display: grid; grid-template-columns: 1.8fr 1fr; } }
         .add-row-top { background: #f0fdf4; padding: 15px; border: 2px solid var(--profit-green); border-radius: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
         .admin-table-container { overflow: auto; border: 1px solid #eee; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; }
@@ -227,8 +226,9 @@
     </div>
 </div>
 
-<div style="padding:10px; text-align:center; display: flex; justify-content: center; gap: 10px; flex-shrink: 0; margin-bottom: 5px;">
+<div style="padding:10px; text-align:center; display: flex; justify-content: center; gap: 10px; flex-wrap:wrap; flex-shrink: 0; margin-bottom: 5px;">
     <button onclick="toggleAdmin()" style="padding:15px 25px; border-radius:15px; background:white; border:3px solid var(--main-brown); font-weight:bold; font-size:1.1em; cursor:pointer; touch-action:manipulation;">🛠️ 商品管理 / 統計</button>
+    <button onclick="toggleSalesStats()" style="padding:15px 25px; border-radius:15px; background:var(--profit-green); color:white; border:none; font-weight:bold; font-size:1.1em; cursor:pointer; touch-action:manipulation;">📊 銷售統計</button>
     <button onclick="toggleHistory()" style="padding:15px 25px; border-radius:15px; background:var(--accent-brown); color:white; border:none; font-weight:bold; font-size:1.1em; cursor:pointer; touch-action:manipulation;">📜 歷史紀錄 / 退貨</button>
 </div>
 
@@ -253,6 +253,14 @@
             <input type="month" id="search-month-end" style="padding:8px;">
             <button onclick="searchHistory('range')" style="padding:8px 15px; background:var(--accent-brown); color:white; border:none; touch-action:manipulation;">📊 區間統計</button>
         </div>
+        <div style="border-top: 1px solid #ddd; padding-top: 10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <label>金流：</label>
+            <button onclick="showHistoryPaymentTotal('現金', '現金')" style="padding:8px 15px; background:white; border:1px solid var(--main-brown); border-radius:5px; cursor:pointer; touch-action:manipulation;">現金</button>
+            <button onclick="showHistoryPaymentTotal('信用卡', '信用卡')" style="padding:8px 15px; background:white; border:1px solid var(--main-brown); border-radius:5px; cursor:pointer; touch-action:manipulation;">信用卡</button>
+            <button onclick="showHistoryPaymentTotal('LINE Pay', 'line pay')" style="padding:8px 15px; background:white; border:1px solid var(--main-brown); border-radius:5px; cursor:pointer; touch-action:manipulation;">line pay</button>
+            <button onclick="showHistoryPaymentTotal('ATM轉帳', 'ATM')" style="padding:8px 15px; background:white; border:1px solid var(--main-brown); border-radius:5px; cursor:pointer; touch-action:manipulation;">ATM</button>
+            <div id="history-payment-total" style="width:100%; padding:10px; background:white; border:1px dashed var(--accent-brown); border-radius:8px; font-weight:bold; display:none;"></div>
+        </div>
     </div>
     <div id="history-result-area" style="flex:1; overflow-y:auto; background:white; padding:15px; border-radius:10px; border:1px solid #eee;"></div>
 </div>
@@ -267,7 +275,6 @@
             <button onclick="exportToExcel()" style="padding:8px 15px; background:#217346; color:white; border:none; touch-action:manipulation;">📥 庫存匯出</button>
             <button onclick="backupData()" style="padding:8px 15px; background:#666; color:white; border:none; touch-action:manipulation;">💾 備份</button>
             <input type="file" id="import-file" style="display:none;" onchange="importData(event)">
-            <button onclick="document.getElementById('import-file').click()" style="padding:8px 15px; background:#d9534f; color:white; border:none; touch-action:manipulation;">⚠️ 還原</button>
             <button onclick="toggleAdmin()" style="padding:8px 15px;">✕ 關閉</button>
         </div>
     </div>
@@ -304,15 +311,51 @@
                 <tbody id="admin-tbody"></tbody>
             </table>
         </div>
-        <div style="background:#f9f9f9; padding:15px; border-radius:10px; overflow-y:auto; display:flex; flex-direction:column;">
-            <h3>📊 銷售排名</h3>
+    </div>
+</div>
+
+<div id="sales-stats-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h2 style="margin:0;">📊 銷售統計</h2>
+        <button onclick="toggleSalesStats()" style="padding:8px 15px;">✕ 關閉</button>
+    </div>
+
+    <div style="background:#fdf5f0; padding:15px; border-radius:10px; margin-bottom:15px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">統計區間：</label>
+        <select id="sales-start-year" style="padding:8px;"></select>
+        <select id="sales-start-month" style="padding:8px;"></select>
+        <span>至</span>
+        <select id="sales-end-year" style="padding:8px;"></select>
+        <select id="sales-end-month" style="padding:8px;"></select>
+        <button onclick="renderSalesCategoryStats()" style="padding:8px 15px; background:var(--accent-brown); color:white; border:none; border-radius:5px; cursor:pointer; touch-action:manipulation;">📊 區間統計</button>
+    </div>
+
+    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:15px;">
+        <div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:10px;">
+            <h3 style="margin-top:0;">📂 分類銷售額</h3>
+            <div id="sales-range-summary" style="background:#eee; padding:10px; border-radius:8px; margin-bottom:10px; font-weight:bold;"></div>
+            <table style="font-size:0.95em;">
+                <thead><tr><th>分類</th><th>銷售額</th></tr></thead>
+                <tbody id="category-sales-tbody"></tbody>
+            </table>
+        </div>
+
+        <div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:10px;">
+            <h3 style="margin-top:0;">👥 每月來客數 / 平均客單價</h3>
+            <table style="font-size:0.95em;">
+                <thead><tr><th>月份</th><th>銷售額</th><th>來客數（自行輸入）</th><th>平均客單價</th></tr></thead>
+                <tbody id="monthly-customer-tbody"></tbody>
+            </table>
+        </div>
+
+        <div style="background:#f9f9f9; padding:15px; border-radius:10px; display:flex; flex-direction:column;">
+            <h3 style="margin-top:0;">📊 銷售排名</h3>
             <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; background:#eee; padding:10px; border-radius:8px;">
                 <select id="stat-year" style="padding:5px; flex:1"></select>
                 <select id="stat-month" style="padding:5px; flex:1"></select>
                 <button onclick="renderStatTable()" style="flex:1; background:var(--main-brown); color:white; border:none; border-radius:5px; cursor:pointer; touch-action:manipulation;">篩選</button>
                 <button onclick="renderStatTable(true)" style="width:100%; margin-top:5px; padding:5px; background:#888; color:white; border:none; border-radius:5px; cursor:pointer; touch-action:manipulation;">不分銷售時間 (全部統計)</button>
             </div>
-            
             <table style="font-size:0.9em;">
                 <thead><tr style="background:#eee;"><th>品名</th><th>量</th><th>額</th></tr></thead>
                 <tbody id="stat-tbody"></tbody>
@@ -342,6 +385,9 @@
     let orders = [];
     let cart = []; 
     let currentPay = '現金';
+    let currentHistoryOrders = [];
+    let hasHistorySearch = false;
+    let monthlyVisitorCounts = {};
 
     const colorOptionsHtml = `
         <option value="#FFFFFF">白</option>
@@ -372,11 +418,12 @@
 
     function handleManualBarcode(val) {
         if(!val) return;
-        const found = findProductById(val);
+        const foundEntry = findProductEntryById(val);
+        const found = foundEntry ? foundEntry.item : null;
         const statusEl = document.getElementById('barcode-status');
         if (found) {
             addCart(found.id);
-            statusEl.innerText = `✅ 已掃描: ${found.n}`;
+            statusEl.innerText = `✅ 已掃描: ${formatProductDisplayName(found, foundEntry.cat)}`;
             statusEl.style.background = "#dcfce7";
         } else {
             statusEl.innerText = `❌ 找不到代碼: ${val}`;
@@ -415,10 +462,44 @@
         renderCart();
     }
 
-    function findProductById(id) {
+    function findProductEntryById(id) {
         let target = null;
-        inv.forEach(c => (c.items || []).forEach(i => { if(String(i.id).toUpperCase() === String(id).toUpperCase()) target = i; }));
+        inv.forEach(c => (c.items || []).forEach(i => {
+            if(String(i.id).toUpperCase() === String(id).toUpperCase()) target = { item: i, cat: c.cat };
+        }));
         return target;
+    }
+
+    function findProductById(id) {
+        const entry = findProductEntryById(id);
+        return entry ? entry.item : null;
+    }
+
+    function getItemCategory(item) {
+        if(!item) return '';
+        if(item.cat) return item.cat;
+
+        const byId = item.id && item.id !== 'CUSTOM' && item.id !== 'DISC' && item.id !== 'EXP'
+            ? findProductEntryById(item.id)
+            : null;
+        if(byId) return byId.cat;
+
+        let category = '';
+        const targetName = normalizeSeatPOSName(item.n);
+        inv.forEach(c => (c.items || []).forEach(i => {
+            if(category) return;
+            if(Number(i.p) === Number(item.p) && normalizeSeatPOSName(i.n) === targetName) category = c.cat;
+        }));
+        return category;
+    }
+
+    function formatProductDisplayName(item, categoryOverride = '') {
+        if(!item) return '';
+        if(item.id === 'DISC' || item.id === 'EXP') return item.n;
+        const category = categoryOverride || getItemCategory(item);
+        const categoryPrefix = category ? `${category}_` : '';
+        const codePrefix = item.id && item.id !== 'CUSTOM' ? `${item.id}-` : '';
+        return `${codePrefix}${categoryPrefix}${item.n}`;
     }
 
     function loadData() {
@@ -433,14 +514,31 @@
                 orders.sort((a,b) => (b.d+b.t).localeCompare(a.d+a.t));
                 updateLog(); 
                 renderStatTable();
+                renderSalesCategoryStats(false);
             });
         }
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+
         const ySel = document.getElementById('stat-year');
         for(let y=2025; y<=2035; y++) ySel.innerHTML += `<option value="${y}">${y}年</option>`;
         const mSel = document.getElementById('stat-month');
         for(let m=1; m<=12; m++) mSel.innerHTML += `<option value="${m}">${m}月</option>`;
-        ySel.value = new Date().getFullYear();
-        mSel.value = new Date().getMonth() + 1;
+        ySel.value = currentYear;
+        mSel.value = currentMonth;
+
+        ['sales-start-year', 'sales-end-year'].forEach(id => {
+            const sel = document.getElementById(id);
+            for(let y=2025; y<=2035; y++) sel.innerHTML += `<option value="${y}">${y}年</option>`;
+            sel.value = currentYear;
+        });
+        ['sales-start-month', 'sales-end-month'].forEach(id => {
+            const sel = document.getElementById(id);
+            for(let m=1; m<=12; m++) sel.innerHTML += `<option value="${m}">${m}月</option>`;
+            sel.value = currentMonth;
+        });
+        renderSalesCategoryStats(false);
+        renderStatTable();
     }
     loadData();
     initSeatToPOSReceiver();
@@ -462,7 +560,7 @@
             
             let gridHtml = `<div class="cat-title" id="c${idx}">${cat.cat}</div><div class="product-grid">`;
             (cat.items || []).forEach(it => {
-                const displayName = `${it.id} ${it.n}`;
+                const displayName = formatProductDisplayName(it, cat.cat);
                 gridHtml += `
                     <div class="p-btn" onclick="addCart('${it.id}')" style="background-color: ${it.color || '#FFFFFF'};">
                         <div class="p-name">${displayName}</div>
@@ -570,7 +668,7 @@
         let stats = {};
         filtered.forEach(o => {
             (o.items || []).forEach(it => {
-                const itName = it.n;
+                const itName = formatProductDisplayName(it);
                 if(!stats[itName]) stats[itName] = { qty:0, amt:0 };
                 stats[itName].qty++;
                 stats[itName].amt += it.p;
@@ -659,33 +757,38 @@
     }
 
     function addCart(id) {
-        let target = findProductById(id);
-        if(target) { cart.push({...target}); renderCart(); }
+        const entry = findProductEntryById(id);
+        if(entry) { cart.push({...entry.item, cat: entry.cat}); renderCart(); }
     }
 
     function normalizeSeatPOSName(v) {
         return String(v || '').replace(/\s+/g,'').replace(/（/g,'(').replace(/）/g,')');
     }
 
-    function findProductByNamePrice(name, price) {
+    function findProductEntryByNamePrice(name, price) {
         let target = null;
         const n = normalizeSeatPOSName(name);
         inv.forEach(c => (c.items || []).forEach(i => {
             if(target) return;
             const iname = normalizeSeatPOSName(i.n);
             if(Number(i.p) === Number(price) && (iname === n || n.includes(iname) || iname.includes(n))) {
-                target = i;
+                target = { item: i, cat: c.cat };
             }
         }));
         return target;
     }
 
+    function findProductByNamePrice(name, price) {
+        const entry = findProductEntryByNamePrice(name, price);
+        return entry ? entry.item : null;
+    }
+
     function addSeatImportedItem(item) {
-        let found = null;
-        if(item.productId) found = findProductById(item.productId);
-        if(!found && item.type !== 'custom') found = findProductByNamePrice(item.name, item.price);
-        if(found) {
-            cart.push({...found});
+        let foundEntry = null;
+        if(item.productId) foundEntry = findProductEntryById(item.productId);
+        if(!foundEntry && item.type !== 'custom') foundEntry = findProductEntryByNamePrice(item.name, item.price);
+        if(foundEntry) {
+            cart.push({...foundEntry.item, cat: foundEntry.cat});
         } else {
             cart.push({
                 id: item.productId || 'CUSTOM',
@@ -732,7 +835,7 @@
 
     function renderCart() {
         document.getElementById('cart-list').innerHTML = cart.map((it, i) => {
-            const displayName = it.n;
+            const displayName = formatProductDisplayName(it);
             return `<div class="cart-item"><span>${displayName}</span><b>$${it.p}</b>
             <span onclick="cart.splice(${i},1);renderCart()" style="color:red; cursor:pointer;">✕</span></div>`;
         }).join('');
@@ -794,7 +897,7 @@
         const todayOrders = orders.filter(o => o.d === today);
         document.getElementById('order-log').innerHTML = todayOrders.map(o => `
             <div style="padding:5px; border-bottom:1px solid #eee; font-size:0.9em;">
-                ${o.t} | $${o.total} (${o.pay}) | ${o.items.map(i => i.n).join(',')}
+                ${o.t} | $${o.total} (${o.pay}) | ${o.items.map(i => formatProductDisplayName(i)).join(',')}
             </div>
         `).join('');
     }
@@ -915,6 +1018,133 @@
         }
     }
 
+    function toggleSalesStats() {
+        const p = document.getElementById('sales-stats-panel');
+        p.style.display = (p.style.display === 'flex' ? 'none' : 'flex');
+        if(p.style.display === 'flex') {
+            renderSalesCategoryStats(false);
+            renderStatTable();
+        }
+    }
+
+    function getOrderMonthKey(order) {
+        const parts = String(order.d || '').split('/');
+        if(parts.length < 2) return '';
+        return `${parts[0]}-${String(parts[1]).padStart(2, '0')}`;
+    }
+
+    function getSalesRangeKeys() {
+        const startYear = document.getElementById('sales-start-year').value;
+        const startMonthValue = document.getElementById('sales-start-month').value;
+        const endYear = document.getElementById('sales-end-year').value;
+        const endMonthValue = document.getElementById('sales-end-month').value;
+        if(!startYear || !startMonthValue || !endYear || !endMonthValue) return { startKey: '', endKey: '' };
+        const startMonth = String(startMonthValue).padStart(2, '0');
+        const endMonth = String(endMonthValue).padStart(2, '0');
+        return { startKey: `${startYear}-${startMonth}`, endKey: `${endYear}-${endMonth}` };
+    }
+
+    function getMonthKeysBetween(startKey, endKey) {
+        const [startYear, startMonth] = startKey.split('-').map(Number);
+        const [endYear, endMonth] = endKey.split('-').map(Number);
+        const keys = [];
+        let year = startYear;
+        let month = startMonth;
+        while(year < endYear || (year === endYear && month <= endMonth)) {
+            keys.push(`${year}-${String(month).padStart(2, '0')}`);
+            month++;
+            if(month > 12) {
+                month = 1;
+                year++;
+            }
+        }
+        return keys;
+    }
+
+    function getSalesCategory(item) {
+        if(item.id === 'DISC') return '折扣';
+        if(item.id === 'CUSTOM') return item.cat || '手動輸入 / 未分類';
+        return getItemCategory(item) || '未分類';
+    }
+
+    function renderSalesCategoryStats(showAlert = true) {
+        const summaryArea = document.getElementById('sales-range-summary');
+        const categoryTbody = document.getElementById('category-sales-tbody');
+        const monthlyTbody = document.getElementById('monthly-customer-tbody');
+        if(!summaryArea || !categoryTbody || !monthlyTbody) return;
+
+        const { startKey, endKey } = getSalesRangeKeys();
+        if(!startKey || !endKey) return;
+        if(startKey > endKey) {
+            if(showAlert) alert('起始月份不可晚於結束月份');
+            return;
+        }
+
+        const filteredOrders = orders.filter(o => {
+            const monthKey = getOrderMonthKey(o);
+            return o.pay !== '支出' && monthKey >= startKey && monthKey <= endKey;
+        });
+
+        const categoryTotals = {};
+        inv.forEach(c => { categoryTotals[c.cat] = 0; });
+        filteredOrders.forEach(o => {
+            (o.items || []).forEach(item => {
+                if(item.id === 'EXP') return;
+                const category = getSalesCategory(item);
+                if(categoryTotals[category] === undefined) categoryTotals[category] = 0;
+                categoryTotals[category] += Number(item.p || 0);
+            });
+        });
+
+        const totalSales = filteredOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+        summaryArea.innerHTML = `${startKey} 至 ${endKey}｜總銷售額：$${totalSales}`;
+
+        const inventoryCategories = inv.map(c => c.cat);
+        const extraCategories = Object.keys(categoryTotals).filter(cat => !inventoryCategories.includes(cat));
+        const categoryOrder = [...inventoryCategories, ...extraCategories];
+        categoryTbody.innerHTML = categoryOrder.map(category => `
+            <tr>
+                <td style="text-align:left;">${category}</td>
+                <td>$${categoryTotals[category] || 0}</td>
+            </tr>
+        `).join('');
+
+        const monthKeys = getMonthKeysBetween(startKey, endKey);
+        const monthlySales = {};
+        monthKeys.forEach(key => { monthlySales[key] = 0; });
+        filteredOrders.forEach(o => {
+            const key = getOrderMonthKey(o);
+            if(monthlySales[key] !== undefined) monthlySales[key] += Number(o.total || 0);
+        });
+
+        monthlyTbody.innerHTML = monthKeys.map(key => {
+            const savedVisitors = monthlyVisitorCounts[key] ?? '';
+            const visitors = Number(savedVisitors);
+            const average = visitors > 0 ? (monthlySales[key] / visitors).toFixed(2) : '';
+            return `
+                <tr>
+                    <td>${key}</td>
+                    <td>$${monthlySales[key]}</td>
+                    <td><input type="number" min="0" id="visitor-${key}" value="${savedVisitors}" placeholder="請輸入" oninput="updateMonthlyAverage('${key}')" style="width:100px; padding:6px; text-align:center;"></td>
+                    <td id="average-${key}">${average === '' ? '-' : '$' + average}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function updateMonthlyAverage(monthKey) {
+        const input = document.getElementById(`visitor-${monthKey}`);
+        const averageCell = document.getElementById(`average-${monthKey}`);
+        if(!input || !averageCell) return;
+
+        monthlyVisitorCounts[monthKey] = input.value;
+        const visitors = Number(input.value);
+        const row = input.closest('tr');
+        const salesText = row ? row.children[1].innerText.replace('$', '') : '0';
+        const sales = Number(salesText || 0);
+        averageCell.innerText = visitors > 0 ? `$${(sales / visitors).toFixed(2)}` : '-';
+    }
+
     function toggleHistory() {
         const p = document.getElementById('history-panel');
         p.style.display = (p.style.display === 'flex' ? 'none' : 'flex');
@@ -957,6 +1187,14 @@
             return a.t.localeCompare(b.t);
         });
 
+        currentHistoryOrders = [...filtered];
+        hasHistorySearch = true;
+        const paymentTotalArea = document.getElementById('history-payment-total');
+        if(paymentTotalArea) {
+            paymentTotalArea.style.display = 'none';
+            paymentTotalArea.innerHTML = '';
+        }
+
         let totalS = filtered.reduce((a,b)=>a+b.total, 0);
         let totalP = filtered.reduce((a,b)=>a+b.profit, 0);
 
@@ -968,7 +1206,7 @@
                 <div style="border-bottom:1px solid #ddd; padding:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <b>${o.d} ${o.t}</b> [${o.pay}]<br>
-                        ${o.items.map(i => i.n).join(', ')}<br>
+                        ${o.items.map(i => formatProductDisplayName(i)).join(', ')}<br>
                         <small style="color:#666;">備註: ${o.note || '無'}</small>
                     </div>
                     <div style="text-align:right;">
@@ -978,6 +1216,16 @@
                 </div>
             `).join('')}
         `;
+    }
+
+    function showHistoryPaymentTotal(method, label) {
+        if(!hasHistorySearch) return alert("請先查詢單日或區間紀錄");
+        const paymentTotal = currentHistoryOrders
+            .filter(o => o.pay === method)
+            .reduce((sum, o) => sum + Number(o.total || 0), 0);
+        const paymentTotalArea = document.getElementById('history-payment-total');
+        paymentTotalArea.innerHTML = `${label} 金流總額：$${paymentTotal}`;
+        paymentTotalArea.style.display = 'block';
     }
 
     function refundOrder(key) {
@@ -1008,7 +1256,7 @@
     function exportHistoryToExcel() {
         let data = orders.map(o => ({
             日期: o.d, 時間: o.t, 總額: o.total, 毛利: o.profit, 支付: o.pay, 備註: o.note, 載具統編: o.taxId || '',
-            內容: o.items.map(i => i.n).join(';')
+            內容: o.items.map(i => formatProductDisplayName(i)).join(';')
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
