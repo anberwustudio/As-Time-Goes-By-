@@ -878,7 +878,8 @@
             pay: currentPay, 
             items: [...cart], 
             note: finalNote,
-            taxId: taxId
+            taxId: taxId,
+            ...(currentPay === '現金' ? { cashReceived, changeAmount } : {})
         };
 
         cart.forEach(item => { 
@@ -891,7 +892,7 @@
         db.ref('inventory').set(inv);
 
         if(printAfter) {
-            printReceipt({ ...orderData, cashReceived, changeAmount });
+            printReceipt(orderData);
         }
 
         alert("結帳成功！訂單已儲存至雲端");
@@ -923,8 +924,13 @@
             return;
         }
 
+        const discountTotal = (order.items || [])
+            .filter(item => item.id === 'DISC')
+            .reduce((sum, item) => sum + Math.abs(Number(item.p || 0)), 0);
+
         const groupedItems = {};
         (order.items || []).forEach(item => {
+            if(item.id === 'DISC') return;
             const itemName = formatProductDisplayName(item);
             const unitPrice = Number(item.p || 0);
             const key = `${itemName}__${unitPrice}`;
@@ -945,13 +951,18 @@
             </div>
         `).join('');
 
-        const cashRows = order.pay === '現金' ? `
+        const hasCashDetails = Object.prototype.hasOwnProperty.call(order, 'cashReceived') &&
+            Object.prototype.hasOwnProperty.call(order, 'changeAmount');
+        const cashRows = order.pay === '現金' ? (hasCashDetails ? `
             <div class="summary-row"><span>實收</span><span>$${Number(order.cashReceived || 0)}</span></div>
             <div class="summary-row"><span>找零</span><span>$${Number(order.changeAmount || 0)}</span></div>
-        ` : '';
+        ` : `
+            <div class="summary-row"><span>實收</span><span>未保存</span></div>
+            <div class="summary-row"><span>找零</span><span>未保存</span></div>
+        `) : '';
 
-        const taxRow = order.taxId ? `<div class="receipt-note">載具／統編：${escapeReceiptHtml(order.taxId)}</div>` : '';
-        const noteRow = order.note ? `<div class="receipt-note">備註：${escapeReceiptHtml(order.note)}</div>` : '';
+        const discountRow = `<div class="summary-row"><span>折扣</span><span>-$${discountTotal}</span></div>`;
+        const noteRow = `<div class="receipt-note">備註：${escapeReceiptHtml(order.note || '無')}</div>`;
 
         printWindow.document.write(`<!DOCTYPE html>
 <html lang="zh-TW">
@@ -995,9 +1006,9 @@
     <div class="divider"></div>
     ${itemRows}
     <div class="divider"></div>
+    ${discountRow}
     <div class="summary-row total-row"><span>合計</span><span>$${Number(order.total || 0)}</span></div>
     ${cashRows}
-    ${taxRow}
     ${noteRow}
     <div class="divider"></div>
     <div class="receipt-footer">謝謝光臨</div>
@@ -1009,6 +1020,19 @@
             printWindow.print();
             printWindow.close();
         }, 400);
+    }
+
+    function printHistoryReceipt(key) {
+        const order = orders.find(o => o.firebaseKey === key);
+        if(!order) {
+            alert('找不到這筆歷史交易，請重新查詢後再試一次。');
+            return;
+        }
+        if(order.pay === '支出') {
+            alert('支出紀錄不提供銷售收據列印。');
+            return;
+        }
+        printReceipt(order);
     }
 
     function updateLog() {
@@ -1367,6 +1391,7 @@
                     </div>
                     <div style="text-align:right;">
                         <span style="font-size:1.2em; font-weight:bold; color:var(--price-red);">$${o.total}</span><br>
+                        ${o.pay !== '支出' ? `<button onclick="printHistoryReceipt('${o.firebaseKey}')" style="color:#4a5568; background:none; border:1px solid #4a5568; border-radius:4px; padding:2px 5px; cursor:pointer; margin-top:5px; touch-action:manipulation;">列印收據</button>` : ''}
                         <button onclick="refundOrder('${o.firebaseKey}')" style="color:red; background:none; border:1px solid red; border-radius:4px; padding:2px 5px; cursor:pointer; margin-top:5px; touch-action:manipulation;">退貨</button>
                     </div>
                 </div>
