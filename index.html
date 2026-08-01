@@ -218,6 +218,7 @@
             </div>
 
             <button onclick="submitOrder()" style="width:100%; padding:20px; margin-top:15px; background:var(--profit-green); color:white; border:none; border-radius:15px; font-weight:bold; font-size:1.6em; touch-action:manipulation;">結帳完成</button>
+            <button onclick="submitOrder(true)" style="width:100%; padding:15px; margin-top:8px; background:#4a5568; color:white; border:none; border-radius:15px; font-weight:bold; font-size:1.2em; cursor:pointer; touch-action:manipulation;">🧾 結帳並列印收據</button>
         </div>
         <div class="card" id="order-log-container">
             <strong>📋 今日即時紀錄</strong>
@@ -850,13 +851,15 @@
         calc();
     }
     
-    function submitOrder() {
+    function submitOrder(printAfter = false) {
         if(!cart.length) return;
         const total = Number(document.getElementById('final-total').innerText);
         const orderDate = document.getElementById('backdate-mode').checked ? 
             new Date(document.getElementById('manual-date').value).toLocaleDateString('zh-TW') : 
             new Date().toLocaleDateString('zh-TW');
         const taxId = document.getElementById('tax-id').value;
+        const cashReceived = Number(document.getElementById('cash-in').value || 0);
+        const changeAmount = Number(document.getElementById('cash-change').innerText || 0);
         
         const flavorVal = document.getElementById('manual-flavor-input').value;
         const noteVal = document.getElementById('discount-note').value;
@@ -887,6 +890,10 @@
         db.ref('orders').push(orderData);
         db.ref('inventory').set(inv);
 
+        if(printAfter) {
+            printReceipt({ ...orderData, cashReceived, changeAmount });
+        }
+
         alert("結帳成功！訂單已儲存至雲端");
         
         cart=[]; 
@@ -898,6 +905,110 @@
         document.getElementById('barcode-status').innerText = '⌛ 條碼 / 座位系統就緒';
         document.getElementById('barcode-status').style.background = "#eee";
         renderCart(); 
+    }
+
+    function escapeReceiptHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function printReceipt(order) {
+        const printWindow = window.open('', '_blank', 'width=380,height=650');
+        if(!printWindow) {
+            alert('瀏覽器阻擋了收據列印視窗，請允許此頁面的彈出式視窗後再試一次。');
+            return;
+        }
+
+        const groupedItems = {};
+        (order.items || []).forEach(item => {
+            const itemName = formatProductDisplayName(item);
+            const unitPrice = Number(item.p || 0);
+            const key = `${itemName}__${unitPrice}`;
+            if(!groupedItems[key]) {
+                groupedItems[key] = { name: itemName, unitPrice, qty: 0, amount: 0 };
+            }
+            groupedItems[key].qty += 1;
+            groupedItems[key].amount += unitPrice;
+        });
+
+        const itemRows = Object.values(groupedItems).map(item => `
+            <div class="receipt-item">
+                <div class="item-name">${escapeReceiptHtml(item.name)}</div>
+                <div class="item-detail">
+                    <span>${item.qty} × $${item.unitPrice}</span>
+                    <span>$${item.amount}</span>
+                </div>
+            </div>
+        `).join('');
+
+        const cashRows = order.pay === '現金' ? `
+            <div class="summary-row"><span>實收</span><span>$${Number(order.cashReceived || 0)}</span></div>
+            <div class="summary-row"><span>找零</span><span>$${Number(order.changeAmount || 0)}</span></div>
+        ` : '';
+
+        const taxRow = order.taxId ? `<div class="receipt-note">載具／統編：${escapeReceiptHtml(order.taxId)}</div>` : '';
+        const noteRow = order.note ? `<div class="receipt-note">備註：${escapeReceiptHtml(order.note)}</div>` : '';
+
+        printWindow.document.write(`<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>時光造所收據</title>
+    <style>
+        @page { size: 58mm auto; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; background: white; }
+        body {
+            width: 48mm;
+            margin: 0 auto;
+            padding: 3mm 1mm 5mm;
+            color: #000;
+            font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+            font-size: 11px;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+        .receipt-title { text-align: center; font-size: 16px; font-weight: 700; margin-bottom: 2mm; }
+        .receipt-subtitle { text-align: center; font-size: 10px; margin-bottom: 2mm; }
+        .divider { border-top: 1px dashed #000; margin: 2mm 0; }
+        .receipt-item { margin-bottom: 1.5mm; }
+        .item-name { font-weight: 600; }
+        .item-detail, .summary-row { display: flex; justify-content: space-between; gap: 2mm; }
+        .summary-row { margin: 1mm 0; }
+        .total-row { font-size: 15px; font-weight: 700; margin-top: 1.5mm; }
+        .receipt-note { margin-top: 1.5mm; font-size: 10px; }
+        .receipt-footer { text-align: center; margin-top: 3mm; font-size: 11px; }
+        @media print {
+            html, body { width: 48mm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-title">As Time Goes By</div>
+    <div class="receipt-subtitle">時光造所</div>
+    <div>日期：${escapeReceiptHtml(order.d)} ${escapeReceiptHtml(order.t)}</div>
+    <div>付款：${escapeReceiptHtml(order.pay)}</div>
+    <div class="divider"></div>
+    ${itemRows}
+    <div class="divider"></div>
+    <div class="summary-row total-row"><span>合計</span><span>$${Number(order.total || 0)}</span></div>
+    ${cashRows}
+    ${taxRow}
+    ${noteRow}
+    <div class="divider"></div>
+    <div class="receipt-footer">謝謝光臨</div>
+</body>
+</html>`);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 400);
     }
 
     function updateLog() {
